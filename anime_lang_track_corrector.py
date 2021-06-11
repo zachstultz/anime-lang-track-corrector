@@ -15,6 +15,7 @@ startTime = datetime.now()
 
 #paths = ["/srv/b772d7b9-c86a-4b50-91dd-67692cdccd28/anime", "/srv/b772d7b9-c86a-4b50-91dd-67692cdccd28/anime movies"]
 paths = ["\\\OPENMEDIAVAULT\\Seagate&Test\\anime", "\\\OPENMEDIAVAULT\\Seagate&Test\\anime movies"]
+
 items_changed = []
 problematic_children = []
 discord_webhook_url = "https://discord.com/api/webhooks/852652199958937650/KGC7jaWz6PYaTLre9F445S9H-_DutWH20RGn-7qGYoEvPISIPMQfqlVsbavvstu8zoPU"
