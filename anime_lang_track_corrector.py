@@ -18,7 +18,7 @@ paths = ["\\\OPENMEDIAVAULT\\Seagate&Test\\anime", "\\\OPENMEDIAVAULT\\Seagate&T
 
 items_changed = []
 problematic_children = []
-discord_webhook_url = "https://discord.com/api/webhooks/852652199958937650/KGC7jaWz6PYaTLre9F445S9H-_DutWH20RGn-7qGYoEvPISIPMQfqlVsbavvstu8zoPU"
+discord_webhook_url = ""
 
 for path in paths:
     if os.path.isdir(path) :
