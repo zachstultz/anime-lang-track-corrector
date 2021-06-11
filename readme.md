@@ -8,7 +8,7 @@ I do not consider this complete by any means, so you have been warned, test it o
 ## How to Use
 1. Run ``` git clone https://github.com/zachstultz/anime-lang-track-corrector ```
 2. Run ```pip install -r requirements.txt```
-3. Add the paths that you want scanned at the top of the file, in the empty string array.
+3. Add the paths that you want scanned at the top of the file, into the appropriate string array.
 4. Run ```anime_lang_track_corrector.py``` in command prompt or terminal.
 
 ## Common Use Case
