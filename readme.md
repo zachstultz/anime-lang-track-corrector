@@ -6,9 +6,10 @@ This project is still a heavy work-in-progress.
 I do not consider this complete by any means, so you have been warned, test it on a small backup of your library first.
 
 ## How to Use
-1. Run ```pip install -r requirements.txt```
-2. Add the paths that you want scanned at the top of the file, in the empty string array.
-2. Run ```anime_lang_track_corrector.py``` in command prompt or terminal.
+1. Run ``` git clone https://github.com/zachstultz/anime-lang-track-corrector ```
+2. Run ```pip install -r requirements.txt```
+3. Add the paths that you want scanned at the top of the file, in the empty string array.
+4. Run ```anime_lang_track_corrector.py``` in command prompt or terminal.
 
 ## Common Use Case
 So you have an anime mkv file that has dual audio, so it has two english subtitle files within it. A subtitle for all dialogue to be used with the japanese audio, and a signs & songs subtitle for use with the english audio.
