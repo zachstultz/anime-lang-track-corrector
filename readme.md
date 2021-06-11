@@ -13,6 +13,6 @@ But the problem is that the signs & songs language flag isn't set properly, it's
 That is the purpose of this program, in my case, for use with plex. Plex can very easily pick subtitles and audio for you atuomatically based on your preferences, but it can't do this when the tracks aren't properly labeled with their correct language.
 
 ## How to Use
-1. Run ```pip install -r requirements.txt``` (coming soon, haven't made it yet)
+1. Run ```pip install -r requirements.txt```
 2. Add the paths that you want scanned at the top of the file, in the empty string array.
 2. Run ```anime_lang_track_corrector.py``` in command prompt or terminal.
