@@ -1,0 +1,3 @@
+[console_scripts]
+bitmath = bitmath:cli_script
+
