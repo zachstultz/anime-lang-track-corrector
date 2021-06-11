@@ -11,14 +11,23 @@ from pysubparser import parser
 from pysubparser.cleaners import ascii, brackets, formatting, lower_case
 from discord_webhook import DiscordWebhook
 from datetime import datetime
-startTime = datetime.now()
+import platform
 
-#paths = ["/srv/b772d7b9-c86a-4b50-91dd-67692cdccd28/anime", "/srv/b772d7b9-c86a-4b50-91dd-67692cdccd28/anime movies"]
-paths = ["\\\OPENMEDIAVAULT\\Seagate&Test\\anime", "\\\OPENMEDIAVAULT\\Seagate&Test\\anime movies"]
+startTime = datetime.now()
+paths = []
+linux_paths = ["/srv/b772d7b9-c86a-4b50-91dd-67692cdccd28/anime", "/srv/b772d7b9-c86a-4b50-91dd-67692cdccd28/anime movies"]
+windows_paths = ["\\\OPENMEDIAVAULT\\Seagate&Test\\anime", "\\\OPENMEDIAVAULT\\Seagate&Test\\anime movies"]
+
+# Optional
+discord_webhook_url = ""
 
 items_changed = []
 problematic_children = []
-discord_webhook_url = ""
+
+if(platform.system() == 'Windows'):
+    paths = windows_paths
+elif(platform.system() == 'Linux'):
+    paths = linux_paths
 
 for path in paths:
     if os.path.isdir(path) :
@@ -84,8 +93,9 @@ for path in paths:
                                                             print("\tTrack set to english.")
                                                             items_changed.append("Track set to english: " + full_path + " Track: " + str(track.track_id+1))
                                                             message = "Track set to english: " + full_path + " Track: " + str(track.track_id+1)
-                                                            webhook = DiscordWebhook(url=discord_webhook_url, content=message)
-                                                            response = webhook.execute()
+                                                            if not discord_webhook_url:
+                                                                webhook = DiscordWebhook(url=discord_webhook_url, content=message)
+                                                                response = webhook.execute()
                                             elif(track._track_type == "subtitles"):
                                                 print("\t\t" + "Extracting file to " + root)
                                                 extension = "txt"
@@ -130,8 +140,9 @@ for path in paths:
                                                         print("Track set to english.")
                                                         items_changed.append("Track set to english: " + full_path + " Track: " + str(track.track_id+1))
                                                         message = "Track set to english: " + full_path + " Track: " + str(track.track_id+1)
-                                                        webhook = DiscordWebhook(url=discord_webhook_url, content=message)
-                                                        response = webhook.execute()
+                                                        if not discord_webhook_url:
+                                                            webhook = DiscordWebhook(url=discord_webhook_url, content=message)
+                                                            response = webhook.execute()
                                                         os.remove(output_file_with_path)
                                                         if(not os.path.isfile(output_file_with_path)):
                                                             print("Test file removed")
@@ -141,8 +152,9 @@ for path in paths:
                                                     else:
                                                         print("Subtitle match percent below 50%, no match found.\n")
                                                         message = "Subtitle match percent below 50%, no match found.\n" + full_path + " Track: " + str(track.track_id+1)
-                                                        webhook = DiscordWebhook(url=discord_webhook_url, content=message)
-                                                        response = webhook.execute()
+                                                        if not discord_webhook_url:
+                                                            webhook = DiscordWebhook(url=discord_webhook_url, content=message)
+                                                            response = webhook.execute()
                                                 else:
                                                     print("Extraction failed.\n")
                                                     problematic_children.append("Extraction failed: " + output_file_with_path)
@@ -159,8 +171,9 @@ for path in paths:
                                                                 print("\tTrack set to english.")
                                                                 message = "Track set to english: " + full_path + " Track: " + str(track.track_id+1)
                                                                 items_changed.append(message)
-                                                                webhook = DiscordWebhook(url=discord_webhook_url, content=message)
-                                                                response = webhook.execute()
+                                                                if not discord_webhook_url:
+                                                                    webhook = DiscordWebhook(url=discord_webhook_url, content=message)
+                                                                    response = webhook.execute()
                                         else:
                                             print("\t\t" + "No matching track found.\n")
                                 else:
@@ -178,20 +191,23 @@ for path in paths:
         print("Invalid Directory\n")
 
 if(problematic_children.count != 0):
-    webhook = DiscordWebhook(url=discord_webhook_url, content=str("\n--- Problematic Files/Directories ---"))
-    response = webhook.execute()
-    webhook = DiscordWebhook(url=discord_webhook_url, content=str(problematic_children))
-    response = webhook.execute()
+    if not discord_webhook_url:
+        webhook = DiscordWebhook(url=discord_webhook_url, content=str("\n--- Problematic Files/Directories ---"))
+        response = webhook.execute()
+        webhook = DiscordWebhook(url=discord_webhook_url, content=str(problematic_children))
+        response = webhook.execute()
     print("\n--- Problematic Files/Directories ---")
     for problem in problematic_children: 
         print(str(problem) + "\n")
 if(items_changed.count != 0):
-    webhook = DiscordWebhook(url=discord_webhook_url, content=str("\n--- Items Changed ---"))
-    response = webhook.execute()
-    webhook = DiscordWebhook(url=discord_webhook_url, content=str(items_changed))
-    response = webhook.execute()
+    if not discord_webhook_url:
+        webhook = DiscordWebhook(url=discord_webhook_url, content=str("\n--- Items Changed ---"))
+        response = webhook.execute()
+        webhook = DiscordWebhook(url=discord_webhook_url, content=str(items_changed))
+        response = webhook.execute()
     print("\n--- Items Changed ---")
     for item in items_changed:
         print(str(item) + "\n")
-webhook = DiscordWebhook(url=discord_webhook_url, content=str("\nTotal Execution Time: " + (datetime.now() - startTime)))
-response = webhook.execute()
+if not discord_webhook_url:
+    webhook = DiscordWebhook(url=discord_webhook_url, content=str("\nTotal Execution Time: " + (datetime.now() - startTime)))
+    response = webhook.execute()
