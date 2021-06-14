@@ -10,14 +10,14 @@ I do not consider this complete by any means, so you have been warned, test it o
 1. Install mkvtoolnix ```apt-get install mkvtoolnix```
 2. Run ``` git clone https://github.com/zachstultz/anime-lang-track-corrector ```
 3. Run ```pip install -r requirements.txt```
-4. Add the paths that you want scanned at the top of the file, into the appropriate string array.
+4. Add the paths that you want scanned at the top of the file, into the string array.
 5. Run ```anime_lang_track_corrector.py``` in command prompt or terminal.
 ### Windows
 1. Download and install mkvtoolnix ```https://mkvtoolnix.download/downloads.html#windows```
 2. Add mkvtoolnix folder location as PATH in windows.
 3. Download or clone repo ``` git clone https://github.com/zachstultz/anime-lang-track-corrector ```
 4. Run ```pip install -r requirements.txt```
-5. Add the paths that you want scanned at the top of the file, into the appropriate string array.
+5. Add the paths that you want scanned at the top of the file, into the string array.
 6. Run ```anime_lang_track_corrector.py``` in command prompt or terminal.
 
 
