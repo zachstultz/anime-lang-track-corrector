@@ -6,6 +6,7 @@ This project is still a heavy work-in-progress.
 I do not consider this complete by any means, so you have been warned, test it on a small backup of your library first.
 
 ## How to Use
+1. Install mkvtoolnix ```apt-get install mkvtoolnix```
 1. Run ``` git clone https://github.com/zachstultz/anime-lang-track-corrector ```
 2. Run ```pip install -r requirements.txt```
 3. Add the paths that you want scanned at the top of the file, into the appropriate string array.
