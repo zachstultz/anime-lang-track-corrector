@@ -17,7 +17,8 @@ I do not consider this complete by any means, so you have been warned, test it o
 2. Add mkvtoolnix folder location as PATH in windows.
 3. Download or clone repo ``` git clone https://github.com/zachstultz/anime-lang-track-corrector ```
 4. Run ```pip install -r requirements.txt```
-5. Run ```anime_lang_track_corrector.py``` in command prompt or terminal.
+5. Add the paths that you want scanned at the top of the file, into the appropriate string array.
+6. Run ```anime_lang_track_corrector.py``` in command prompt or terminal.
 
 
 ## Common Use Case
