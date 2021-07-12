@@ -3,7 +3,7 @@ An automation script that corrects undetermined and not applicable subtitle flag
 It goes through each mkv file, track-by-track and checks for any undetermined or not applicable marked subtitles, and at first, attempts to correct it by process of elimination. If not by that, then by extracting the subtitle, extracting the text from the subtitle, and determining the language of the file.
 
 **This project is still a heavy work-in-progress.
-I do not consider this complete by any means, so you have been warned, test it on a small backup of your library first.**
+I do not consider this complete by any means, so you have been warned, best to test it on a small backup of your library.**
 
 ## How to Use
 ### Linux
