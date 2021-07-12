@@ -14,20 +14,13 @@ from datetime import datetime
 import platform
 
 startTime = datetime.now()
-paths = []
-linux_paths = ["/srv/b772d7b9-c86a-4b50-91dd-67692cdccd28/anime", "/srv/b772d7b9-c86a-4b50-91dd-67692cdccd28/anime movies"]
-windows_paths = ["\\\OPENMEDIAVAULT\\Seagate&Test\\anime", "\\\OPENMEDIAVAULT\\Seagate&Test\\anime movies"]
+paths = [""]
 
 # Optional
 discord_webhook_url = ""
 
 items_changed = []
 problematic_children = []
-
-if(platform.system() == 'Windows'):
-    paths = windows_paths
-elif(platform.system() == 'Linux'):
-    paths = linux_paths
 
 for path in paths:
     if os.path.isdir(path) :
