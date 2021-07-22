@@ -5,7 +5,7 @@ It goes through each mkv file, track-by-track and checks for any undetermined or
 **This project is still a heavy work-in-progress.
 I do not consider this complete by any means, so you have been warned, best to test it on a small backup of your library.**
 
-## How to Use
+## How to Use [OUTDATED, SCRIPT NOW REQUIRES SUBTITLE EDIT AND FASTTEXT, ALL UPDATE INSTRUCTIONS SOON]
 ### Linux
 1. Install mkvtoolnix ```apt-get install mkvtoolnix```
 2. Run ``` git clone https://github.com/zachstultz/anime-lang-track-corrector ```
