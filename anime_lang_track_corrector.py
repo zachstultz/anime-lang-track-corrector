@@ -19,10 +19,10 @@ model = fasttext.load_model(PRETRAINED_MODEL_PATH)
 startTime = datetime.now()
 
 # Paths you want scanned
-paths = ["Z:\\anime", "\\\OPENMEDIAVAULT\\Seagate&Test\\anime movies", "/srv/ba5519d0-7fe2-4232-bf1d-2bac3d1801fb/anime", "/srv/ba5519d0-7fe2-4232-bf1d-2bac3d1801fb/anime movies"]
+paths = [""]
 
 # OPTIONAL Discord Webhook
-discord_webhook_url = "https://discord.com/api/webhooks/852652199958937650/KGC7jaWz6PYaTLre9F445S9H-_DutWH20RGn-7qGYoEvPISIPMQfqlVsbavvstu8zoPU"
+discord_webhook_url = ""
 
 # Stuff printed at the end
 items_changed = []
