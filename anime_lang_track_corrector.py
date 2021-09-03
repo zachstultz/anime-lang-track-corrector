@@ -43,8 +43,6 @@ discord_webhook_url = args.webhook_url
 items_changed = []
 problematic_children = []
 
-cleaned_files = []
-
 # The linux location for SE
 path_to_subtitle_edit_linux = "/data/docker/se/"
 
@@ -62,8 +60,7 @@ def remove_file(file):
         if(not os.path.isfile(file)):
             print("\t\tFile removed: " + file)
         else:
-            print("\t\tFailed to remove file: " + file)
-            problematic_children.append("Failed to remove file: " + file)
+            send_error_message("\t\tFailed to remove file: " + file)
     else:
         print("\t\tFile does not exist, if it does, the file could not be deleted.")
 
@@ -77,8 +74,8 @@ def detect_subtitle_encoding(output_file_with_path):
         detector.close()
         encoding = detector.result['encoding']
     except FileNotFoundError:
-        print("File not found.")
-        print("Defaulting to UTF-8")
+        send_error_message("File not found.")
+        send_error_message("Defaulting to UTF-8")
         encoding = "UTF-8"
     return encoding
 
@@ -113,7 +110,7 @@ def set_extension(track):
         extension = "sub"
     return extension
 
-# Removes hidden files, useful for MacOS
+# Removes hidden files from list, useful for MacOS
 def remove_hidden_files(files, root):
     for file in files[:]:
         if(file.startswith(".") and os.path.isfile(os.path.join(root, file))):
@@ -127,9 +124,8 @@ def extract_output_subtitle_file_and_convert(file_name):
         print("\t\tExtraction successfull.")
         return convert_subtitle_file(outputted_file)
     else:
-        print("Extraction failed.\n")
-        problematic_children.append("Extraction failed: " + outputted_file)
-    
+        send_error_message("Extraction failed: " + outputted_file + "\n")
+
 def set_track_language(path, track, language_code):
     subprocess.Popen(["mkvpropedit", path,"--edit","track:" + str(track.track_id+1),"--set","language=" + language_code])
     subprocess.Popen(["mkvpropedit", path,"--edit","track:" + str(track.track_id+1),"--set","language-ietf=" + language_code])
@@ -151,11 +147,8 @@ def detect_subs_via_fasttext():
         remove_file(output_file_with_path)
     else:
         match_result_percent = str(match_result) + "%"
-        print("Match: " + match_result_percent + "\n\t\tSubtitle match below " + str(required_lang_match_percentage) + "%, no match found.\n")
-        message = "Match: " + match_result_percent + "\nSubtitle match below " + str(required_lang_match_percentage) + "%, no match found.\n" + full_path + " Track: " + str(track.track_id+1)
-        problematic_children.append(message)
-        send_discord_message(message)
-        #remove_signs_and_subs(subtitle_lines_array)
+        send_error_message("Match: " + match_result_percent + "\n\t\tSubtitle match below " + str(required_lang_match_percentage) + "%, no match found.\n")
+        remove_signs_and_subs(subtitle_lines_array)
         remove_file(output_file_with_path)
 
 def evaluate_subtitle_lines(lines):
@@ -173,13 +166,13 @@ def evaluate_subtitle_lines(lines):
             else:
                 print("\t\tEmpty filtered subtitle.")
         except Exception or TypeError:
-            error = "Error determining result of subtitle: " + str(subtitle.text)
-            print(error)
-            problematic_children.append(error)
+            message = "Error determining result of subtitle: " + str(subtitle.text)
+            send_error_message(message)
     return (total_english/total_lines)*100
 
-def parse_subtitle_lines_into_array(input_file):  
-    extension = re.sub(r"\.", "", os.path.splitext(input_file)[1])
+def parse_subtitle_lines_into_array(input_file):
+    extension = os.path.splitext(input_file)[1]
+    extension = (re.sub(r"(\.)", "", extension)).strip()
     subtitles = parser.parse(input_file, subtitle_type=extension, encoding=detect_subtitle_encoding(input_file))
     output = []
     for subtitle in subtitles:
@@ -199,16 +192,15 @@ def convert_subtitle_file(output_file_with_path):
         remove_file(output_file_with_path)
         return converted_file
     else:
-        print("Conversion failed.\n")
-        problematic_children.append("Conversion failed: " + output_file_with_path)
+        send_error_message("Conversion failed.\n")
     return converted_file
 
 def remove_signs_and_subs(files, original_file, original_files_results):
     original_file_releaser = re.search(r"-(?:.(?!-))+$", file, flags=re.IGNORECASE)
     original = original_file
     comparision = []
-    if(len(cleaned_files > 1)):
-        without_original = cleaned_files
+    if(len(files > 1)):
+        without_original = files
         without_original.remove(file)
         for fileScan in without_original:
             fileScan_releaser = re.search(r"-(?:.(?!-))+$", fileScan, flags=re.IGNORECASE)
@@ -219,11 +211,11 @@ def clean_and_sort(files, root, dirs):
     remove_hidden_files(files, root)
     dirs.sort()
     files.sort()
-    for file in files:
+    for file in files[:]:
         fileIsTrailer = str(re.search('trailer', str(file), re.IGNORECASE))
         fileEndsWithMKV = file.endswith(".mkv")
-        if(fileEndsWithMKV and fileIsTrailer == "None"):
-            cleaned_files.append(file)
+        if(not fileEndsWithMKV or fileIsTrailer != "None"):
+            files.remove(file)
 
 # The execution start of the program
 if discord_webhook_url != "":
@@ -237,8 +229,8 @@ if os.path.isdir(path):
     for root, dirs, files, in os.walk(path):
         clean_and_sort(files, root, dirs)
         print("\nCurrent Path: ", root + "\nDirectories: ", dirs)
-        print("Files: ", cleaned_files)
-        for file in cleaned_files:
+        print("Files: ", files)
+        for file in files:
             full_path = os.path.join(root, file)
             file_without_extension = os.path.splitext(full_path)[0]
             if os.path.isfile(full_path):
@@ -340,18 +332,11 @@ if os.path.isdir(path):
                     else:
                         print("\t" + "isValidMKV: " + str(isMKVFile))
                 except KeyError:
-                    message = "\t" + "Error with file: " + file
-                    print(message)
-                    problematic_children.append(message)
-                    send_discord_message(message)                          
+                    send_error_message("\t" + "Error with file: " + file)                        
             else:
-                message = "\n\tNot a valid file: " + full_path + "\n"
-                print(message)
-                problematic_children.append(message)
-                send_discord_message(message)
+                send_error_message("\n\tNot a valid file: " + full_path + "\n")
 else :
-    print("Invalid Directory: " + path + "\n")
-    problematic_children.append("Invalid Directory: " + path)
+    send_error_message("Invalid Directory: " + path + "\n")
 
 if(len(problematic_children) != 0):
     if discord_webhook_url != "":
