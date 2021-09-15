@@ -5,6 +5,13 @@ It goes through each mkv file, track-by-track and checks for any undetermined or
 **This project is still a heavy work-in-progress.
 I do not consider this complete by any means, so you have been warned, test it on a small backup of your library first.**
 
+## Common Use Case
+So you have an anime mkv file that has dual audio, so it has two english subtitle files within it. A subtitle for all dialogue to be used with the japanese audio, and a signs & songs subtitle for use with the english audio.
+
+But the problem is that the signs & songs or full subtitles language flag isn't set properly, it's showing as Undetermined or Not Applicable.
+
+That is the purpose of this program, in my case, for use with plex. Plex can very easily pick subtitles and audio for you automatically based on your preferences, but it can't do this when the tracks aren't properly labeled with their correct language.
+
 ## Setup Instructions
 ### Linux
 1. Run ``` git clone https://github.com/zachstultz/anime-lang-track-corrector ```
@@ -66,13 +73,6 @@ optional arguments:
 ```
 EX: python3 anime_lang_track_corrector.py "/folder/to/anime" "https://discord.com/api/webhooks/WEBHOOK_KEY" #The webhook is optional
 ```
-
-## Common Use Case
-So you have an anime mkv file that has dual audio, so it has two english subtitle files within it. A subtitle for all dialogue to be used with the japanese audio, and a signs & songs subtitle for use with the english audio.
-
-But the problem is that the signs & songs or full subtitles language flag isn't set properly, it's showing as Undetermined or Not Applicable.
-
-That is the purpose of this program, in my case, for use with plex. Plex can very easily pick subtitles and audio for you automatically based on your preferences, but it can't do this when the tracks aren't properly labeled with their correct language.
 
 ## Current Goals
 1. Rewrite script to use classes.
