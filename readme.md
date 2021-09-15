@@ -3,23 +3,69 @@ An automation script that corrects undetermined and not applicable subtitle flag
 It goes through each mkv file, track-by-track and checks for any undetermined or not applicable marked subtitles, and at first, attempts to correct it by process of elimination. If not by that, then by extracting the subtitle, extracting the text from the subtitle, and determining the language of the file.
 
 **This project is still a heavy work-in-progress.
-I do not consider this complete by any means, so you have been warned, best to test it on a small backup of your library.**
+I do not consider this complete by any means, so you have been warned, test it on a small backup of your library first.**
 
-## How to Use [OUTDATED INSTRUCTIONS, SCRIPT NOW REQUIRES SUBTITLE EDIT AND FASTTEXT, ALL UPDATE INSTRUCTIONS SOON]
+## Setup Instructions
 ### Linux
-1. Install mkvtoolnix ```apt-get install mkvtoolnix```
-2. Run ``` git clone https://github.com/zachstultz/anime-lang-track-corrector ```
-3. Run ```pip install -r requirements.txt```
-4. Add the paths that you want scanned at the top of the file, into the string array.
-5. Run ```anime_lang_track_corrector.py``` in command prompt or terminal.
+1. Run ``` git clone https://github.com/zachstultz/anime-lang-track-corrector ```
+2. Run ```pip install -r requirements.txt```
+3. Install mkvtoolnix ```sudo apt-get install mkvtoolnix```
+4. Download the portable version of Subtitle Edit (and not the installer). https://github.com/SubtitleEdit/subtitleedit/releases
+5. Install the dependencies for Subtitle Edit:
+
+  Packages required for Ubuntu based distros:
+  ```
+  sudo apt-get install mono-complete
+  sudo apt-get install libhunspell-dev
+  sudo apt-get install libmpv-dev (libmpv.so)
+  sudo apt-get install tesseract-ocr
+  sudo apt-get install vlc (already installed on some distros, SE uses (libvlc.so))
+  sudo apt-get install ffmpeg (already installed on some distros)
+  ```
+  Packages required for Arch based distros (like Manjaro):
+  ```
+  sudo pacman -S mono
+  sudo pacman -S mpv
+  sudo pacman -S hunspell
+  sudo pacman -S ttf-dejavu (Unicode font)
+  sudo pacman -S tesseract
+  sudo pacman -S tesseract-data-eng (or install via "sudo mono SubtitleEdit.exe")
+  ```
+6. Update path_to_subtitle_edit_linux at the top of the script with the path to that folder.
+![Screen Shot 2021-09-15 at 3 24 02 PM](https://user-images.githubusercontent.com/8385256/133504275-382ebb15-e0de-4e15-8692-af1dc8acf748.png)
+6. Download the fasttext language model. Either the uncompressed(lid.176.bin) or compressed(lid.176.ftz). https://fasttext.cc/docs/en/language-identification.html
+8. Drag and drop the model into the root folder of the script.
+![Screen Shot 2021-09-15 at 3 34 30 PM](https://user-images.githubusercontent.com/8385256/133505641-9b37a2ce-2679-452a-812b-5e3a72a86865.png)
+9. Change the model file name in the script, contained in the PRETRAINED_MODEL_PATH. (if you're using uncompressed, it's already set).
+![Screen Shot 2021-09-15 at 3 31 35 PM](https://user-images.githubusercontent.com/8385256/133505669-78bf2ec8-297c-4dc3-b79a-ba6c11501e09.png)
+9. Read the usage below and enjoy!
 ### Windows
 1. Download and install mkvtoolnix ```https://mkvtoolnix.download/downloads.html#windows```
 2. Add the mkvtoolnix folder location as a PATH in windows.
-3. Download or clone repo ``` git clone https://github.com/zachstultz/anime-lang-track-corrector ```
-4. Run ```pip install -r requirements.txt```
-5. Add the paths that you want scanned at the top of the file, into the string array.
-6. Run ```anime_lang_track_corrector.py``` in command prompt or terminal.
+3. Download Subtitle Edit, install, and add the folder location as a PATH in windows. https://github.com/SubtitleEdit/subtitleedit/releases
+4. Download the fasttext language model. Either the uncompressed(lid.176.bin) or compressed(lid.176.ftz). https://fasttext.cc/docs/en/language-identification.html
+5. Drag and drop the model into the root folder of the script.
+![Screen Shot 2021-09-15 at 3 34 30 PM](https://user-images.githubusercontent.com/8385256/133505641-9b37a2ce-2679-452a-812b-5e3a72a86865.png)
+6. Change the model file name in the script, contained in the PRETRAINED_MODEL_PATH. (if you're using uncompressed, it's already set).
+![Screen Shot 2021-09-15 at 3 31 35 PM](https://user-images.githubusercontent.com/8385256/133505669-78bf2ec8-297c-4dc3-b79a-ba6c11501e09.png)
+7. Read the usage below and enjoy!
 
+## Usage
+```
+usage: anime_lang_track_corrector.py [-h] [path] [webhook_url]
+
+My anime language track corrector script.
+
+positional arguments:
+  path         The path to be passed in and scanned.
+  webhook_url  The optional discord webhook url
+
+optional arguments:
+  -h, --help   show this help message and exit
+```
+```
+EX: python3 anime_lang_track_corrector.py "/folder/to/anime" "https://discord.com/api/webhooks/WEBHOOK_KEY" #The webhook is optional
+```
 
 ## Common Use Case
 So you have an anime mkv file that has dual audio, so it has two english subtitle files within it. A subtitle for all dialogue to be used with the japanese audio, and a signs & songs subtitle for use with the english audio.
