@@ -4,10 +4,10 @@ import sys
 import platform
 import re
 import subprocess
-from typing import Text
 import pymkv
 import fasttext
 import argparse
+from typing import Text
 from pysubparser import parser
 from discord_webhook import DiscordWebhook
 from datetime import datetime
@@ -51,8 +51,8 @@ path_to_subtitle_edit_linux = ""
 signs_keywords = ["sign", "music", "song"]
 full_keywords = ["full", "dialog", "dialogue", "english subs"]
 
-# Folders to be ignored
-ignored_folders = [""]
+# Folders to ignore
+ignored_folders = []
 
 # Removes the file if it exists, used for cleaning up after FastText detection
 def remove_file(file):
@@ -79,15 +79,17 @@ def detect_subtitle_encoding(output_file_with_path):
         encoding = detector.result['encoding']
     except FileNotFoundError:
         send_error_message("File not found: " + output_file_with_path)
-        send_error_message("Defaulting to UTF-8")
+        print("Defaulting to UTF-8")
         encoding = "UTF-8"
     return encoding
 
+# Appends, sends, and prints our error message
 def send_error_message(message):
     problematic_children.append(message)
     send_discord_message(message)
     print(message)
 
+# Appends, sends, and prints our change message
 def send_change_message(message):
     items_changed.append(message)
     send_discord_message(message)
@@ -104,7 +106,8 @@ def print_track_info(track):
     print("\n\t\t" + "Track: " + str(track.track_id))
     print("\t\t" + "Type: " + str(track._track_type))
     print("\t\t" + "Name: " + str(track.track_name))
-    print("\t\t" + "Language: " + str(track.language) + "\n")
+    print("\t\t" + "Language: " + str(track.language))
+    print("\t\t" + "Forced: " + str(track.forced_track) + "\n")
 
 # Determines and sets the file extension
 def set_extension(track):
@@ -131,9 +134,9 @@ def extract_output_subtitle_file_and_convert(file_name, track, full_path):
     call = subprocess.run(call, shell=True, capture_output=True, text=True)
     if(os.path.isfile(outputted_file) and call.returncode == 0):
         print("\t\tExtraction successfull.")
+        print("\t\tConverting subtitle for detection.")
         converted = convert_subtitle_file(outputted_file)
         if((converted is not None) and (os.path.isfile(converted))):
-            print("\t\tConversion successful.")
             return converted
         else:
             print("\t\tConversion failed.")
@@ -169,11 +172,11 @@ def check_and_set_result(match_result, full_path, track, lang_code, output_file_
         match_result_percent = str(match_result) + "%"
         send_error_message("\n\t\tFile: " + file + "\n\t\tMatch: " + match_result_percent + "\n\t\tSubtitle match below " + str(required_lang_match_percentage) + "%, no match found.\n")
         #if(match_result > 5):
-            #remove_signs_and_subs(files, file, original_subtitle_array)
+            #remove_signs_and_subs(files, file, original_subtitle_array, tracks)
         remove_file(output_file_with_path)
 
 def detect_subs_via_fasttext():
-    if(search_track_for_language_keyword(path, track, "eng") == 0):
+    if(search_track_for_language_keyword(path, track, "eng", root) == False):
         print("\t\t" + "File will be extracted and detection will be attempted.")
         print("\t\t" + "Extracting test file to " + root)
         try:
@@ -220,7 +223,10 @@ def evaluate_subtitle_lines(lines):
                 #print("\t\tEmpty filtered subtitle.")
         except Exception or TypeError:
             send_error_message("Error determining result of subtitle: " + str(subtitle.text))
-    return (total_english/total_lines)*100
+    if(total_english != 0):
+        return (total_english/total_lines)*100
+    else:
+        return 0
 
 def parse_subtitle_lines_into_array(input_file):
     extension = os.path.splitext(input_file)[1]
@@ -279,61 +285,99 @@ def print_similar_releases(comparision_releases):
             print("\t\t" + release)
     else:
         print("\t\tNo comparision releases found.")
-        
-def remove_signs_and_subs(files, original_file, original_files_results):
+
+def check_tracks(tracks, comparision_full_path, original_files_results):
+    send_discord_message("\t\tChecking internal subtitle tracks as comparision.")
+    for comparision_track in tracks:
+        if(comparision_track._track_type == "subtitles"):
+            print_track_info(comparision_track)
+            extension = set_extension(comparision_track)
+            output_file_with_path = extract_output_subtitle_file_and_convert("lang_comparison"+"."+extension, comparision_track, comparision_full_path)
+            if(output_file_with_path is not None):
+                comparision_subtitle_lines_array = parse_subtitle_lines_into_array(output_file_with_path)
+                comparision_subtitle_lines_array = clean_subtitle_lines(comparision_subtitle_lines_array)
+                duplicates_removed = 0
+                removed = []
+                for result in comparision_subtitle_lines_array[:]:
+                    if result in original_files_results:
+                        original_files_results.remove(result)
+                        print("\t\tDuplicate removed from original: " + result)
+                        removed.append(result)
+                        duplicates_removed += 1
+                if duplicates_removed > 1:
+                    print("\t\t-- Comparision Attempt --")
+                    print("\t\tEnough duplicates found between original and comparision.")
+                    print("\t\tRetesting original with duplicates removed.")
+                    match_result = evaluate_subtitle_lines(original_files_results)
+                    set_result = check_and_set_result_two(match_result, full_path, track, "eng", output_file_with_path)
+                    print("\t\t-- Comparision Attempt --")
+                    if (set_result == 1):
+                        return True
+                else:
+                    print("\t\tNot enough duplicates found in track.")
+    send_discord_message("\t\tLanguage could not be determined through internal tracks.")
+    send_discord_message("\t\tChecking externally...")
+    return False
+
+def remove_signs_and_subs(files, original_file, original_files_results, tracks):
     original_files_results = clean_subtitle_lines(original_files_results)
-    original_file_releaser = re.search(r"-(?:.(?!-))+$", original_file)
-    original_file_releaser = re.sub(r"([-\.])(mkv)", "", original_file_releaser.group())
-    original_file_releaser = (re.sub(r"-", "", original_file_releaser)).lower()
-    if original_file_releaser != "":
-        comparision_releases = find_files_by_release_group(original_file_releaser, files)
-        if(len(comparision_releases) != 0):
-            print("\n\t\t- Checking Similar Releases to [" + original_file_releaser + "] -")
-            comparision_releases.remove(original_file)
-            print_similar_releases(comparision_releases)
-            try:
-                for f in reversed(comparision_releases):
-                    print("\n\t\tFile: " + f)
-                    comparision_full_path = os.path.join(root, f)
-                    tracks = get_mkv_tracks(comparision_full_path)
-                    tracks = remove_all_tracks_but_subtitles(tracks)
-                    print("\n\t\t--- Tracks [" + str(tracks.__len__()) + "] ---")
-                    for comparision_track in tracks:
-                        if(comparision_track._track_type == "subtitles"):
-                            print_track_info(comparision_track)
-                            extension = set_extension(comparision_track)
-                            output_file_with_path = extract_output_subtitle_file_and_convert("lang_comparison"+"."+extension, comparision_track, comparision_full_path)
-                            if(output_file_with_path is not None):
-                                comparision_subtitle_lines_array = parse_subtitle_lines_into_array(output_file_with_path)
-                                comparision_subtitle_lines_array = clean_subtitle_lines(comparision_subtitle_lines_array)
-                                duplicates_removed = 0
-                                removed = []
-                                for result in comparision_subtitle_lines_array[:]:
-                                    if result in original_files_results:
-                                        original_files_results.remove(result)
-                                        print("\t\tDuplicate removed from original: " + result)
-                                        removed.append(result)
-                                        duplicates_removed += 1
-                                if duplicates_removed > 1:
-                                    send_change_message("\t\t-- Comparision Attempt --")
-                                    print("\t\tEnough duplicates found between original and comparision.")
-                                    print("\t\tRetesting original with duplicates removed.")
-                                    match_result = evaluate_subtitle_lines(original_files_results)
-                                    set_result = check_and_set_result_two(match_result, full_path, track, "eng", output_file_with_path)
-                                    send_change_message("\t\t-- Comparision Attempt --")
-                                    if (set_result == 1):
-                                        return
-                                else:
-                                    send_error_message("\t\tNot enough duplicates found in track.")
-            except Exception as e:
-                send_error_message(e)
-                return
-        else:
-            print("\t\tNo similar release found for: " + file + " at " + root)
+    tracks.remove(track)
+    if(check_tracks(tracks, os.path.join(root, file), original_files_results) == False):
+        original_file_releaser = re.search(r"-(?:.(?!-))+$", original_file)
+        original_file_releaser = re.sub(r"([-\.])(mkv)", "", original_file_releaser.group())
+        original_file_releaser = (re.sub(r"-", "", original_file_releaser)).lower()
+        if original_file_releaser != "":
+            comparision_releases = find_files_by_release_group(original_file_releaser, files)
+            if(len(comparision_releases) != 0):
+                send_discord_message("\n\t\t- Checking Similar Releases to [" + original_file_releaser + "] -")
+                comparision_releases.remove(original_file)
+                print_similar_releases(comparision_releases)
+                try:
+                    for f in reversed(comparision_releases):
+                        print("\n\t\tFile: " + f)
+                        comparision_full_path = os.path.join(root, f)
+                        tracks = get_mkv_tracks(comparision_full_path)
+                        tracks = remove_all_tracks_but_subtitles(tracks)
+                        print("\n\t\t--- Tracks [" + str(tracks.__len__()) + "] ---")
+                        for comparision_track in tracks:
+                            if(comparision_track._track_type == "subtitles"):
+                                print_track_info(comparision_track)
+                                extension = set_extension(comparision_track)
+                                output_file_with_path = extract_output_subtitle_file_and_convert("lang_comparison"+"."+extension, comparision_track, comparision_full_path)
+                                if(output_file_with_path is not None):
+                                    comparision_subtitle_lines_array = parse_subtitle_lines_into_array(output_file_with_path)
+                                    comparision_subtitle_lines_array = clean_subtitle_lines(comparision_subtitle_lines_array)
+                                    duplicates_removed = 0
+                                    removed = []
+                                    for result in comparision_subtitle_lines_array[:]:
+                                        if result in original_files_results:
+                                            original_files_results.remove(result)
+                                            print("\t\tDuplicate removed from original: " + result)
+                                            removed.append(result)
+                                            duplicates_removed += 1
+                                    if duplicates_removed > 1:
+                                        print("\t\t-- Comparision Attempt --")
+                                        print("\t\tEnough duplicates found between original and comparision.")
+                                        print("\t\tRetesting original with duplicates removed.")
+                                        match_result = evaluate_subtitle_lines(original_files_results)
+                                        set_result = check_and_set_result_two(match_result, full_path, track, "eng", output_file_with_path)
+                                        print("\t\t-- Comparision Attempt --")
+                                        if (set_result == 1):
+                                            return
+                                    else:
+                                        print("\t\tNot enough duplicates found in track.")
+                except Exception as e:
+                    print(e)
+                    return
+            else:
+                send_discord_message("\t\tNo similar release found for: " + file + " at " + root)
+    else:
+        send_discord_message("\t\tSuccessfully set through internal subs")
 
 def clean_and_sort(files, root, dirs):
     remove_hidden_files(files, root)
-    dirs[:] = [d for d in dirs if d not in ignored_folders]
+    if(len(ignored_folders) != 0):
+        dirs[:] = [d for d in dirs if d not in ignored_folders]
     dirs.sort()
     files.sort()
     for file in files[:]:
@@ -342,15 +386,15 @@ def clean_and_sort(files, root, dirs):
         if(not fileEndsWithMKV or fileIsTrailer != "None"):
             files.remove(file)
 
-def search_track_for_language_keyword(path, track, lang_code):
+def search_track_for_language_keyword(path, track, lang_code, root):
     if(re.search('english', str(track.track_name), re.IGNORECASE) or re.search(r"\beng\b", str(track.track_name), re.IGNORECASE)):
-        print("\t\t" + "English keyword found in track name.")
-        print("\t\t" + "Setting track language to english.")
-        set_track_language(path, track, lang_code)
-        return 1
+        send_discord_message("\t\t" + "English keyword found in track name.")
+        send_discord_message("\t\t" + "Setting track language to english.")
+        set_track_language(os.path.join(root, file), track, lang_code)
+        return True
     else:
         print("\t\t" + "No language keyword found in track name.")
-        return 0
+        return False
 
 # The execution start of the program
 if discord_webhook_url != "":
@@ -418,10 +462,9 @@ if os.path.isdir(path):
                                                     if((total_audio_and_subtitle_tracks % 2) == 0):
                                                         if(unknown_audio_track_count == 0 and unknown_subtitle_track_count == 1):
                                                             if(total_audio_and_subtitle_tracks - (jpn_audio_track_count + eng_audio_track_count + jpn_subtitle_track_count + eng_subtitle_track_count) == unknown_subtitle_track_count):
-                                                                print("\tTrack determined to be english through process of elimination.")
+                                                                send_discord_message("\tTrack determined to be english through process of elimination.")
                                                                 subprocess.Popen(["mkvpropedit", full_path,"--edit","track:" + str(track.track_id+1),"--set","language=eng"])
-                                                                print("\tTrack set to english.")
-                                                                send_change_message("Track set to english: " + full_path + " Track: " + str(track.track_id+1))
+                                                                send_discord_message("Track set to english: " + full_path + " Track: " + str(track.track_id+1))
                                                                 break
                                             elif(eng_audio_track_count == 0):
                                                 print("\t\t" + "No recognized name track.")
@@ -429,10 +472,9 @@ if os.path.isdir(path):
                                                     if eng_subtitle_track_count == 0 and eng_audio_track_count == 0:
                                                         if unknown_audio_track_count == 0 and unknown_subtitle_track_count == 1:
                                                             if (total_audio_and_subtitle_tracks - (jpn_audio_track_count + jpn_subtitle_track_count)) == unknown_subtitle_track_count:
-                                                                print("\tTrack determined to be english through process of elimination.")
+                                                                send_discord_message("\tTrack determined to be english through process of elimination.")
                                                                 subprocess.Popen(["mkvpropedit", full_path,"--edit","track:" + str(track.track_id+1),"--set","language=eng"])
-                                                                print("\tTrack set to english.")
-                                                                send_change_message("Track set to english: " + full_path + " Track: " + str(track.track_id+1))
+                                                                send_discord_message("Track set to english: " + full_path + " Track: " + str(track.track_id+1))
                                                                 break
                                             else:
                                                 print("\t\t" + "Language could not be determined through process of elimination.")
@@ -455,24 +497,17 @@ if os.path.isdir(path):
             else:
                 send_error_message("\n\tNot a valid file: " + full_path + "\n")
 else :
-    send_error_message("Invalid Directory: " + path + "\n")
+    print("Invalid Directory: " + path + "\n")
 
 if(len(problematic_children) != 0):
-    if discord_webhook_url != "":
-        send_discord_message("--- Errors ---")
-    print("\n--- Errors ---")
+    print("\n\t--- Errors ---")
     for problem in problematic_children: 
         print(str(problem) + "\n")
-        send_discord_message(str(problem))
 if(len(items_changed) != 0):
-    if discord_webhook_url != "":
-        send_discord_message("\n--- Items Changed ---")
-    print("\n--- Items Changed ---")
+    print("\n\t--- Items Changed ---")
     for item in items_changed:
         print(str(item) + "\n")
         send_discord_message(str(item))
-        
-if discord_webhook_url != "":
-    send_discord_message("\nTotal Execution Time: " + str((datetime.now() - startTime)))    
-print(("\nTotal Execution Time: " + str((datetime.now() - startTime))))
-send_discord_message("[END]-------------------------------------------[END]")
+
+print("\nTotal Execution Time: " + str((datetime.now() - startTime)))    
+print("[END]-------------------------------------------[END]")
