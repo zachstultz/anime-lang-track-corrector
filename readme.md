@@ -70,9 +70,9 @@ EX: python3 anime_lang_track_corrector.py "/folder/to/anime" "https://discord.co
 ## Common Use Case
 So you have an anime mkv file that has dual audio, so it has two english subtitle files within it. A subtitle for all dialogue to be used with the japanese audio, and a signs & songs subtitle for use with the english audio.
 
-But the problem is that the signs & songs language flag isn't set properly, it's showing as Undetermined or Not Applicable.
+But the problem is that the signs & songs or full subtitles language flag isn't set properly, it's showing as Undetermined or Not Applicable.
 
-That is the purpose of this program, in my case, for use with plex. Plex can very easily pick subtitles and audio for you atuomatically based on your preferences, but it can't do this when the tracks aren't properly labeled with their correct language.
+That is the purpose of this program, in my case, for use with plex. Plex can very easily pick subtitles and audio for you automatically based on your preferences, but it can't do this when the tracks aren't properly labeled with their correct language.
 
 ## Current Goals
 1. Rewrite script to use classes.
@@ -80,5 +80,5 @@ That is the purpose of this program, in my case, for use with plex. Plex can ver
 3. Move any values required to be set by the user, to a settings file.
 4. Massive code cleanup.
 5. Simplify README setup.
-6. Find alternative to Subtitles Edit, and eliminate that dedendency.
+6. Find alternative to Subtitles Edit, and eliminate that dependency.
 7. Offer langdetect as an alternative to fasttext.
