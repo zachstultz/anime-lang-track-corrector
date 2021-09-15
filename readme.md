@@ -73,3 +73,12 @@ So you have an anime mkv file that has dual audio, so it has two english subtitl
 But the problem is that the signs & songs language flag isn't set properly, it's showing as Undetermined or Not Applicable.
 
 That is the purpose of this program, in my case, for use with plex. Plex can very easily pick subtitles and audio for you atuomatically based on your preferences, but it can't do this when the tracks aren't properly labeled with their correct language.
+
+## Current Goals
+1. Rewrite script to use classes.
+2. Add support for setting all languages supported by fasttext, instead of just english.
+3. Move any values required to be set by the user, to a settings file.
+4. Massive code cleanup.
+5. Simplify README setup.
+6. Find alternative to Subtitles Edit, and eliminate that dedendency.
+7. Offer langdetect as an alternative to fasttext.
