@@ -99,7 +99,7 @@ def send_change_message(message):
 def send_discord_message(message):
     if discord_webhook_url != "":
         webhook = DiscordWebhook(url=discord_webhook_url, content=message, rate_limit_retry=True)
-        response = webhook.execute()
+        webhook.execute()
     print(message)
         
 # Prints the information about the given track
@@ -109,7 +109,7 @@ def print_track_info(track):
     print("\t\t" + "Name: " + str(track.track_name))
     print("\t\t" + "Language: " + str(track.language))
     if(track._track_type == "subtitles"):
-        print("\t\t" + "Forced: " + str(track.forced_track) + "\n")
+        print("\t\t" + "Forced: " + str(track.forced_track))
 
 # Determines and sets the file extension
 def set_extension(track):
@@ -165,6 +165,7 @@ def check_and_set_result_two(match_result, full_path, track, lang_code, output_f
         return 0
 
 def check_and_set_result(match_result, full_path, track, lang_code, output_file_with_path, original_subtitle_array):
+    match_result_percent = str(match_result) + "%"
     if (match_result > required_lang_match_percentage):
         send_discord_message("\n\t\tFile: " + file + "\n\t\tMatch: " + match_result_percent)
         print("\t\tSubtitle file detected as english.")
@@ -172,7 +173,6 @@ def check_and_set_result(match_result, full_path, track, lang_code, output_file_
         set_track_language(full_path, track, lang_code)
         remove_file(output_file_with_path)
     else:
-        match_result_percent = str(match_result) + "%"
         send_error_message("\n\t\tFile: " + file + "\n\t\tMatch: " + match_result_percent + "\n\t\tSubtitle match below " + str(required_lang_match_percentage) + "%, no match found.\n")
         #if(match_result > 5):
             #remove_signs_and_subs(files, file, original_subtitle_array, tracks)
@@ -224,7 +224,7 @@ def evaluate_subtitle_lines(lines):
                     total_english += 1
             #else:
                 #print("\t\tEmpty filtered subtitle.")
-        except Exception or TypeError:
+        except Exception:
             send_error_message("Error determining result of subtitle: " + str(subtitle.text))
     if(total_english != 0):
         return (total_english/total_lines)*100
@@ -401,6 +401,7 @@ def search_track_for_language_keyword(path, track, lang_code, root):
 
 # The execution start of the program
 if discord_webhook_url != "":
+    send_discord_message("")
     send_discord_message("\n[START]-------------------------------------------[START]")
     send_discord_message("Start Time: " + str(datetime.now()))
     send_discord_message("Script: anime_lang_track_corrector.py")
@@ -490,7 +491,7 @@ if os.path.isdir(path):
                                     #extension = set_extension(track)
                                     #detect_subs_via_fasttext()
                                 else:
-                                    print("\t\t" + "No matching track found.\n")
+                                    print("\n\t\t" + "No matching track found.\n")
                         else:
                             print("\t" + "isSupportedByMKVMerge: " + str(isSupportedByMKVMerge))
                     else:
