@@ -100,6 +100,7 @@ def send_discord_message(message):
     if discord_webhook_url != "":
         webhook = DiscordWebhook(url=discord_webhook_url, content=message, rate_limit_retry=True)
         response = webhook.execute()
+    print(message)
         
 # Prints the information about the given track
 def print_track_info(track):
@@ -107,7 +108,8 @@ def print_track_info(track):
     print("\t\t" + "Type: " + str(track._track_type))
     print("\t\t" + "Name: " + str(track.track_name))
     print("\t\t" + "Language: " + str(track.language))
-    print("\t\t" + "Forced: " + str(track.forced_track) + "\n")
+    if(track._track_type == "subtitles"):
+        print("\t\t" + "Forced: " + str(track.forced_track) + "\n")
 
 # Determines and sets the file extension
 def set_extension(track):
@@ -151,9 +153,9 @@ def set_track_language(path, track, language_code):
 def check_and_set_result_two(match_result, full_path, track, lang_code, output_file_with_path):
     match_result_percent = str(match_result) + "%"
     if (match_result > required_lang_match_percentage):
-        send_change_message("\n\t\tFile: " + file + "\n\t\tMatch: " + match_result_percent)
+        send_discord_message("\n\t\tFile: " + file + "\n\t\tMatch: " + match_result_percent)
         print("\t\tSubtitle file detected as english.")
-        print("\t\tSetting english on sub file within mkv")
+        print("\t\tSetting english on track within mkv")
         set_track_language(full_path, track, lang_code)
         remove_file(output_file_with_path)
         return 1
@@ -164,8 +166,9 @@ def check_and_set_result_two(match_result, full_path, track, lang_code, output_f
 
 def check_and_set_result(match_result, full_path, track, lang_code, output_file_with_path, original_subtitle_array):
     if (match_result > required_lang_match_percentage):
+        send_discord_message("\n\t\tFile: " + file + "\n\t\tMatch: " + match_result_percent)
         print("\t\tSubtitle file detected as english.")
-        print("\t\tSetting english on sub file within mkv")
+        print("\t\tSetting english on track within mkv")
         set_track_language(full_path, track, lang_code)
         remove_file(output_file_with_path)
     else:
@@ -242,7 +245,7 @@ def convert_subtitle_file(output_file_with_path):
         if(user_os == "Windows"):
             call = "SubtitleEdit /convert " + "\"\\\\?\\" + output_file_with_path + "\" srt /RemoveFormatting /MergeSameTexts /overwrite"
         elif(user_os == "Linux"):
-            call = "xvfb-run -a mono "+path_to_subtitle_edit_linux+"SubtitleEdit.exe /convert " + "\""  + output_file_with_path + "\" srt /RemoveFormatting /MergeSameTexts /overwrite"
+            call = "xvfb-run -a mono "+os.path.join(path_to_subtitle_edit_linux, "SubtitleEdit.exe")+" /convert " + "\""  + output_file_with_path + "\" srt /RemoveFormatting /MergeSameTexts /overwrite"
         try:
             call = subprocess.run(call, shell=True)
         except subprocess.CalledProcessError as e:
@@ -398,7 +401,7 @@ def search_track_for_language_keyword(path, track, lang_code, root):
 
 # The execution start of the program
 if discord_webhook_url != "":
-    send_discord_message("[START]-------------------------------------------[START]")
+    send_discord_message("\n[START]-------------------------------------------[START]")
     send_discord_message("Start Time: " + str(datetime.now()))
     send_discord_message("Script: anime_lang_track_corrector.py")
     send_discord_message("Path: " + path)
@@ -464,7 +467,7 @@ if os.path.isdir(path):
                                                             if(total_audio_and_subtitle_tracks - (jpn_audio_track_count + eng_audio_track_count + jpn_subtitle_track_count + eng_subtitle_track_count) == unknown_subtitle_track_count):
                                                                 send_discord_message("\tTrack determined to be english through process of elimination.")
                                                                 subprocess.Popen(["mkvpropedit", full_path,"--edit","track:" + str(track.track_id+1),"--set","language=eng"])
-                                                                send_discord_message("Track set to english: " + full_path + " Track: " + str(track.track_id+1))
+                                                                send_discord_message("Track " + str(track.track_id+1) + " set to english on: " + full_path)
                                                                 break
                                             elif(eng_audio_track_count == 0):
                                                 print("\t\t" + "No recognized name track.")
@@ -474,7 +477,7 @@ if os.path.isdir(path):
                                                             if (total_audio_and_subtitle_tracks - (jpn_audio_track_count + jpn_subtitle_track_count)) == unknown_subtitle_track_count:
                                                                 send_discord_message("\tTrack determined to be english through process of elimination.")
                                                                 subprocess.Popen(["mkvpropedit", full_path,"--edit","track:" + str(track.track_id+1),"--set","language=eng"])
-                                                                send_discord_message("Track set to english: " + full_path + " Track: " + str(track.track_id+1))
+                                                                send_discord_message("Track " + str(track.track_id+1) + " set to english on: " + full_path)
                                                                 break
                                             else:
                                                 print("\t\t" + "Language could not be determined through process of elimination.")
@@ -497,17 +500,16 @@ if os.path.isdir(path):
             else:
                 send_error_message("\n\tNot a valid file: " + full_path + "\n")
 else :
-    print("Invalid Directory: " + path + "\n")
+    send_error_message("Invalid Directory: " + path + "\n")
 
 if(len(problematic_children) != 0):
-    print("\n\t--- Errors ---")
+    send_discord_message("\n\t--- Errors ---")
     for problem in problematic_children: 
-        print(str(problem) + "\n")
+        send_discord_message(str(problem) + "\n")
 if(len(items_changed) != 0):
-    print("\n\t--- Items Changed ---")
+    send_discord_message("\n\t--- Items Changed ---")
     for item in items_changed:
-        print(str(item) + "\n")
-        send_discord_message(str(item))
+        send_discord_message(str(item) + "\n")
 
-print("\nTotal Execution Time: " + str((datetime.now() - startTime)))    
-print("[END]-------------------------------------------[END]")
+send_discord_message("\nTotal Execution Time: " + str((datetime.now() - startTime)))    
+send_discord_message("[END]-------------------------------------------[END]\n")
