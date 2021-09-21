@@ -1,6 +1,6 @@
 # Anime-Lang-Track-Corrector
 An automation script that corrects undetermined and not applicable subtitle flags within mkv files for anime. 
-It goes through each mkv file, track-by-track and checks for any undetermined or not applicable marked subtitles, then, at first, attempts to correct it by process of elimination. If not by that, then by extracting the subtitle file to a readable format, parsing each subtitle line-by-line, and using a language detection module to determine the overall language of the file.
+It goes through each mkv file, track-by-track and checks for any undetermined or not applicable marked subtitles, then, at first, attempts to correct it by process of elimination. If not by that, then by extracting the subtitle file to a readable format, parsing each subtitle line-by-line, and using a language detection module to determine the overall language of the file. Then, if the overall detected language of the file meets the required threshhold (default is 70%), then the file language flag is set with that language.
 
 ## Common Use Case
 You have an anime mkv file that has dual audio, so it has two english subtitle files within it. A subtitle for all dialogue to be used with the japanese audio, and a signs & songs subtitle for use with the english audio. But the problem is that the signs & songs or full subtitles language flag isn't set properly, it's showing as Undetermined or Not Applicable.
