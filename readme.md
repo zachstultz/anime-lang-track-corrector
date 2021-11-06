@@ -73,7 +73,7 @@ optional arguments:
 EX: python3 anime_lang_track_corrector.py "/folder/to/anime" "https://discord.com/api/webhooks/WEBHOOK_KEY" #The webhook is optional
 ```
 
-## Current Goals
+## Goals
 1. Rewrite script to use classes.
 2. Add support for setting all languages supported by fasttext, instead of just english.
 3. Move any values required to be set by the user, to a settings file.
