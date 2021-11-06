@@ -33,14 +33,18 @@ That is the purpose of this program, in my case, for use with plex. Plex can ver
   sudo pacman -S tesseract
   sudo pacman -S tesseract-data-eng (or install via "sudo mono SubtitleEdit.exe")
   ```
-6. Update path_to_subtitle_edit_linux at the top of the script with the path to that folder.
+6. Install XVFB
+```
+sudo apt-get install xvfb
+```
+7. Update path_to_subtitle_edit_linux at the top of the script with the path to that folder.
 ![Screen Shot 2021-09-15 at 3 24 02 PM](https://user-images.githubusercontent.com/8385256/133504275-382ebb15-e0de-4e15-8692-af1dc8acf748.png)
-6. Download the fasttext language model. Either the uncompressed(lid.176.bin) or compressed(lid.176.ftz). https://fasttext.cc/docs/en/language-identification.html
-8. Drag and drop the model into the root folder of the script.
+8. Download the fasttext language model. Either the uncompressed(lid.176.bin) or compressed(lid.176.ftz). https://fasttext.cc/docs/en/language-identification.html
+9. Drag and drop the model into the root folder of the script.
 ![Screen Shot 2021-09-15 at 3 34 30 PM](https://user-images.githubusercontent.com/8385256/133505641-9b37a2ce-2679-452a-812b-5e3a72a86865.png)
-9. Change the model file name in the script, contained in the PRETRAINED_MODEL_PATH. (if you're using uncompressed, it's already set).
+10. Change the model file name in the script, contained in the PRETRAINED_MODEL_PATH. (if you're using uncompressed, it's already set).
 ![Screen Shot 2021-09-15 at 3 31 35 PM](https://user-images.githubusercontent.com/8385256/133505669-78bf2ec8-297c-4dc3-b79a-ba6c11501e09.png)
-9. Read the usage below and enjoy!
+11. Read the usage below and enjoy!
 ### Windows
 1. Download and install mkvtoolnix ```https://mkvtoolnix.download/downloads.html#windows```
 2. Add the mkvtoolnix folder location as a PATH in windows.
