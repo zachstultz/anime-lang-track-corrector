@@ -120,6 +120,7 @@ def print_track_info(track):
     print("\t\t" + "Type: " + str(track._track_type))
     print("\t\t" + "Name: " + str(track.track_name))
     print("\t\t" + "Language: " + str(track.language))
+    print("\t\t" + "Codec: " + str(track.track_codec))
     if track._track_type == "subtitles":
         print("\t\t" + "Forced: " + str(track.forced_track))
 
@@ -809,15 +810,15 @@ if os.path.isdir(path):
                                         )
                                         detect_subs_via_fasttext()
                                 #elif (
-                                #    (track._track_type == "subtitles")
-                                #    and track.language == "jpn"
+                                    #(track._track_type == "subtitles")
+                                    #and track.language == "jpn"
                                 #) and not (
-                                #    re.search(
-                                #        "japanese", str(track.track_name), re.IGNORECASE
-                                #    )
-                                #    or re.search(
-                                #        r"\bjpn\b", str(track.track_name), re.IGNORECASE
-                                #    )
+                                    #re.search(
+                                        #"japanese", str(track.track_name), re.IGNORECASE
+                                    #)
+                                    #or re.search(
+                                        #r"\bjpn\b", str(track.track_name), re.IGNORECASE
+                                    #)
                                 #):
                                     #extension = set_extension(track)
                                     #detect_subs_via_fasttext()
