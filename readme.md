@@ -10,7 +10,7 @@ That is the purpose of this program, in my case, for use with plex. Plex can ver
 ## Setup Instructions
 ### Linux
 1. Run ``` git clone https://github.com/zachstultz/anime-lang-track-corrector ```
-2. Run ```pip install -r requirements.txt```
+2. Run ```pip3 install -r requirements.txt```
 3. Install mkvtoolnix ```sudo apt-get install mkvtoolnix```
 4. Download the portable version of Subtitle Edit (and not the installer). https://github.com/SubtitleEdit/subtitleedit/releases
 5. Install the dependencies for Subtitle Edit:
