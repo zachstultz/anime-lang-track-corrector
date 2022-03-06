@@ -13,14 +13,6 @@ from discord_webhook import DiscordWebhook
 from datetime import datetime
 from chardet.universaldetector import UniversalDetector
 
-p = argparse.ArgumentParser(description="My anime language track corrector script.")
-p.add_argument(
-    "path", help="The path to be passed in and scanned.", default="", nargs="?"
-)
-p.add_argument(
-    "webhook_url", help="The optional discord webhook url", default="", nargs="?"
-)
-args = p.parse_args()
 
 # The OS of the user
 user_os = platform.system()
@@ -36,14 +28,6 @@ required_lang_match_percentage = 70
 # Used to determine the total execution time at the end
 startTime = datetime.now()
 
-# passed path to be scanned
-path = args.path
-path = os.path.dirname(path)
-path_with_file = args.path
-
-# OPTIONAL Discord Webhook
-discord_webhook_url = args.webhook_url
-
 # Stuff printed at the end
 items_changed = []
 problematic_children = []
@@ -57,6 +41,41 @@ full_keywords = ["full", "dialog", "dialogue", "english subs"]
 
 # Folders to ignore
 ignored_folders = []
+
+p = argparse.ArgumentParser(
+    description="A script that corrects undetermined and not applicable subtitle flags within mkv files for anime."
+)
+p.add_argument(
+    "-p",
+    "--path",
+    help="The path to the anime folder to be scanned by os.walk()",
+    required=False,
+)
+p.add_argument(
+    "-f", "--file", help="The individual video file to be processed.", required=False
+)
+p.add_argument(
+    "-wh",
+    "--webhook",
+    help="The optional discord webhook url to be pinged about changes and errors.",
+    required=False,
+)
+args = p.parse_args()
+# parse the arguments
+if args.path:
+    path = args.path
+else:
+    print("\n\t\tPlease specify a path to the anime folder.")
+    sys.exit()
+if args.file:
+    file = args.file
+else:
+    file = ""
+if args.webhook:
+    discord_webhook_url = args.webhook
+else:
+    discord_webhook_url = ""
+
 
 # Removes the file if it exists, used for cleaning up after FastText detection
 def remove_file(file):
@@ -249,7 +268,7 @@ def check_and_set_result(
             + str(required_lang_match_percentage)
             + "%, no match found.\n"
         )
-        #if match_result > 5:
+        #if match_result > 10:
             #remove_signs_and_subs(files, file, original_subtitle_array, tracks)
         remove_file(output_file_with_path)
 
@@ -587,7 +606,6 @@ if discord_webhook_url != "":
     send_discord_message("Script: anime_lang_track_corrector.py")
     send_discord_message("Path: " + path)
 
-    
 if os.path.isdir(path):
     os.chdir(path)
     for (
@@ -820,6 +838,11 @@ if os.path.isdir(path):
                                         #r"\bjpn\b", str(track.track_name), re.IGNORECASE
                                     #)
                                 #):
+                                    #extension = set_extension(track)
+                                    #detect_subs_via_fasttext()
+                                #elif (
+                                    #track._track_type == "subtitles"
+                                #) and track.language == "mul":
                                     #extension = set_extension(track)
                                     #detect_subs_via_fasttext()
                                 else:
