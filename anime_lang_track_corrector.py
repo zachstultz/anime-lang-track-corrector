@@ -65,12 +65,12 @@ args = p.parse_args()
 if args.path:
     path = args.path
 else:
-    print("\n\t\tPlease specify a path to the anime folder.")
-    sys.exit()
+    args.path = None
 if args.file:
     file = args.file
+    path = os.path.dirname(file)
 else:
-    file = ""
+    args.file = None
 if args.webhook:
     discord_webhook_url = args.webhook
 else:
@@ -165,7 +165,7 @@ def remove_hidden_files(files, root):
             files.remove(file)
 
 
-def extract_output_subtitle_file_and_convert(file_name, track, full_path):
+def extract_output_subtitle_file_and_convert(file_name, track, full_path, root):
     outputted_file = os.path.join(root, file_name)
     call = (
         "mkvextract tracks "
@@ -192,7 +192,7 @@ def extract_output_subtitle_file_and_convert(file_name, track, full_path):
         send_error_message("Extraction failed: " + outputted_file + "\n")
 
 
-def set_track_language(path, track, language_code):
+def set_track_language(path, track, language_code, full_path):
     subprocess.Popen(
         [
             "mkvpropedit",
@@ -215,7 +215,7 @@ def set_track_language(path, track, language_code):
 
 
 def check_and_set_result_two(
-    match_result, full_path, track, lang_code, output_file_with_path
+    match_result, full_path, track, lang_code, output_file_with_path, root
 ):
     match_result_percent = str(match_result) + "%"
     if match_result > required_lang_match_percentage:
@@ -224,7 +224,7 @@ def check_and_set_result_two(
         )
         print("\t\tSubtitle file detected as english.")
         print("\t\tSetting english on track within mkv")
-        set_track_language(full_path, track, lang_code)
+        set_track_language(full_path, track, lang_code, full_path)
         remove_file(output_file_with_path)
         return 1
     else:
@@ -248,6 +248,7 @@ def check_and_set_result(
     lang_code,
     output_file_with_path,
     original_subtitle_array,
+    root,
 ):
     match_result_percent = str(match_result) + "%"
     if match_result > required_lang_match_percentage:
@@ -256,7 +257,7 @@ def check_and_set_result(
         )
         print("\t\tSubtitle file detected as english.")
         print("\t\tSetting english on track within mkv")
-        set_track_language(full_path, track, lang_code)
+        set_track_language(full_path, track, lang_code, full_path)
         remove_file(output_file_with_path)
     else:
         send_error_message(
@@ -269,17 +270,20 @@ def check_and_set_result(
             + "%, no match found.\n"
         )
         #if match_result > 10:
-            #remove_signs_and_subs(files, file, original_subtitle_array, tracks)
+            #remove_signs_and_subs(files, file, original_subtitle_array, tracks, root)
         remove_file(output_file_with_path)
 
 
-def detect_subs_via_fasttext():
-    if search_track_for_language_keyword(path, track, "eng", root) == False:
+def detect_subs_via_fasttext(track, extension, root, full_path):
+    eng_keyword_search_and_set = search_track_for_language_keyword(
+        path, track, "eng", root, full_path
+    )
+    if not eng_keyword_search_and_set:
         print("\t\t" + "File will be extracted and detection will be attempted.")
         print("\t\t" + "Extracting test file to " + root)
         try:
             output_file_with_path = extract_output_subtitle_file_and_convert(
-                "lang_test" + "." + extension, track, full_path
+                "lang_test" + "." + extension, track, full_path, root
             )
             if output_file_with_path is not None:
                 subtitle_lines_array = parse_subtitle_lines_into_array(
@@ -293,10 +297,13 @@ def detect_subs_via_fasttext():
                     "eng",
                     output_file_with_path,
                     subtitle_lines_array,
+                    root,
                 )
         except Exception as e:
             send_error_message(e)
             return
+    else:
+        return True
 
 
 def clean_subtitle_lines(lines):
@@ -427,7 +434,7 @@ def print_similar_releases(comparision_releases):
         print("\t\tNo comparision releases found.")
 
 
-def check_tracks(tracks, comparision_full_path, original_files_results):
+def check_tracks(tracks, comparision_full_path, original_files_results, root):
     send_discord_message("\t\tChecking internal subtitle tracks as comparision.")
     for comparision_track in tracks:
         if comparision_track._track_type == "subtitles":
@@ -437,6 +444,7 @@ def check_tracks(tracks, comparision_full_path, original_files_results):
                 "lang_comparison" + "." + extension,
                 comparision_track,
                 comparision_full_path,
+                root,
             )
             if output_file_with_path is not None:
                 comparision_subtitle_lines_array = parse_subtitle_lines_into_array(
@@ -461,7 +469,12 @@ def check_tracks(tracks, comparision_full_path, original_files_results):
                     print("\t\tRetesting original with duplicates removed.")
                     match_result = evaluate_subtitle_lines(original_files_results)
                     set_result = check_and_set_result_two(
-                        match_result, full_path, track, "eng", output_file_with_path
+                        match_result,
+                        full_path,
+                        track,
+                        "eng",
+                        output_file_with_path,
+                        root,
                     )
                     print("\t\t-- Comparision Attempt --")
                     if set_result == 1:
@@ -475,7 +488,7 @@ def check_tracks(tracks, comparision_full_path, original_files_results):
     return False
 
 
-def remove_signs_and_subs(files, original_file, original_files_results, tracks):
+def remove_signs_and_subs(files, original_file, original_files_results, tracks, root):
     original_files_results = clean_subtitle_lines(original_files_results)
     tracks.remove(track)
     if check_tracks(tracks, os.path.join(root, file), original_files_results) == False:
@@ -512,6 +525,7 @@ def remove_signs_and_subs(files, original_file, original_files_results, tracks):
                                         "lang_comparison" + "." + extension,
                                         comparision_track,
                                         comparision_full_path,
+                                        root,
                                     )
                                 )
                                 if output_file_with_path is not None:
@@ -553,6 +567,7 @@ def remove_signs_and_subs(files, original_file, original_files_results, tracks):
                                             track,
                                             "eng",
                                             output_file_with_path,
+                                            root,
                                         )
                                         print("\t\t-- Comparision Attempt --")
                                         if set_result == 1:
@@ -585,13 +600,13 @@ def clean_and_sort(files, root, dirs):
             files.remove(file)
 
 
-def search_track_for_language_keyword(path, track, lang_code, root):
+def search_track_for_language_keyword(path, track, lang_code, root, full_path):
     if re.search("english", str(track.track_name), re.IGNORECASE) or re.search(
         r"\beng\b", str(track.track_name), re.IGNORECASE
     ):
         send_discord_message("\t\t" + "English keyword found in track name.")
         send_discord_message("\t\t" + "Setting track language to english.")
-        set_track_language(os.path.join(root, file), track, lang_code)
+        set_track_language(os.path.join(root, file), track, lang_code, full_path)
         return True
     else:
         print("\n\t\t" + "No language keyword found in track name.")
@@ -606,259 +621,262 @@ if discord_webhook_url != "":
     send_discord_message("Script: anime_lang_track_corrector.py")
     send_discord_message("Path: " + path)
 
-if os.path.isdir(path):
-    os.chdir(path)
-    for (
-        root,
-        dirs,
-        files,
-    ) in os.walk(path):
-        clean_and_sort(files, root, dirs)
-        print("\nCurrent Path: ", root + "\nDirectories: ", dirs)
-        print("Files: ", files)
-        for file in files:
-            full_path = os.path.join(root, file)
-            file_without_extension = os.path.splitext(full_path)[0]
-            if os.path.isfile(full_path):
-                print("\n\tPath: ", root)
-                print("\tFile: " + file)
-                try:
-                    isMKVFile = pymkv.verify_matroska(full_path)
-                    if isMKVFile:
-                        print("\t" + "isValidMKV: " + str(isMKVFile))
-                        isSupportedByMKVMerge = pymkv.verify_supported(full_path)
-                        if isSupportedByMKVMerge:
-                            print(
-                                "\t"
-                                + "isSupportedByMKVMerge: "
-                                + str(isSupportedByMKVMerge)
-                            )
-                            tracks = get_mkv_tracks(full_path)
-                            jpn_audio_track_count = 0
-                            eng_audio_track_count = 0
-                            jpn_subtitle_track_count = 0
-                            eng_subtitle_track_count = 0
-                            unknown_audio_track_count = 0
-                            unknown_subtitle_track_count = 0
-                            total_audio_and_subtitle_tracks = 0
-                            for track in tracks:
-                                if track._track_type == "audio":
-                                    if (
-                                        track.language == "jpn"
-                                        or track.language == "jp"
-                                    ):
-                                        jpn_audio_track_count += 1
-                                    elif (
-                                        track.language == "eng"
-                                        or track.language == "en"
-                                    ):
-                                        eng_audio_track_count += 1
-                                    else:
-                                        unknown_audio_track_count += 1
-                                if track._track_type == "subtitles":
-                                    if (
-                                        track.language == "jpn"
-                                        or track.language == "jp"
-                                    ):
-                                        jpn_subtitle_track_count += 1
-                                    elif (
-                                        track.language == "eng"
-                                        or track.language == "en"
-                                    ):
-                                        eng_subtitle_track_count += 1
-                                    else:
-                                        unknown_subtitle_track_count += 1
-                            total_audio_and_subtitle_tracks = (
-                                jpn_audio_track_count
-                                + eng_audio_track_count
-                                + jpn_subtitle_track_count
-                                + eng_subtitle_track_count
-                                + unknown_audio_track_count
-                                + unknown_subtitle_track_count
-                            )
-                            print(
-                                "\n\t\t--- Tracks [" + str(tracks.__len__()) + "] ---"
-                            )
-                            for track in tracks:
-                                print_track_info(track)
-                                if (track._track_type == "subtitles") and (
-                                    track.language == "zxx" or track.language == "und"
-                                ):
-                                    print(
-                                        "\t\t"
-                                        + "No Linguistic Content/Not Applicable track found!"
-                                    )
-                                    print("\t\t" + "Track language is unknown.")
-                                    extension = set_extension(track)
-                                    if str(track.track_name) != "None":
-                                        for sign in signs_keywords:
-                                            sign = str(
-                                                re.search(
-                                                    sign,
-                                                    track.track_name,
-                                                    re.IGNORECASE,
-                                                )
+
+def start(files, root, dirs):
+    for file in files:
+        full_path = os.path.join(root, file)
+        file_without_extension = os.path.splitext(full_path)[0]
+        if os.path.isfile(full_path):
+            print("\n\tPath: ", root)
+            print("\tFile: " + file)
+            try:
+                isMKVFile = pymkv.verify_matroska(full_path)
+                if isMKVFile:
+                    print("\t" + "isValidMKV: " + str(isMKVFile))
+                    isSupportedByMKVMerge = pymkv.verify_supported(full_path)
+                    if isSupportedByMKVMerge:
+                        print(
+                            "\t"
+                            + "isSupportedByMKVMerge: "
+                            + str(isSupportedByMKVMerge)
+                        )
+                        tracks = get_mkv_tracks(full_path)
+                        jpn_audio_track_count = 0
+                        eng_audio_track_count = 0
+                        jpn_subtitle_track_count = 0
+                        eng_subtitle_track_count = 0
+                        unknown_audio_track_count = 0
+                        unknown_subtitle_track_count = 0
+                        total_audio_and_subtitle_tracks = 0
+                        for track in tracks:
+                            if track._track_type == "audio":
+                                if track.language == "jpn" or track.language == "jp":
+                                    jpn_audio_track_count += 1
+                                elif track.language == "eng" or track.language == "en":
+                                    eng_audio_track_count += 1
+                                else:
+                                    unknown_audio_track_count += 1
+                            if track._track_type == "subtitles":
+                                if track.language == "jpn" or track.language == "jp":
+                                    jpn_subtitle_track_count += 1
+                                elif track.language == "eng" or track.language == "en":
+                                    eng_subtitle_track_count += 1
+                                else:
+                                    unknown_subtitle_track_count += 1
+                        total_audio_and_subtitle_tracks = (
+                            jpn_audio_track_count
+                            + eng_audio_track_count
+                            + jpn_subtitle_track_count
+                            + eng_subtitle_track_count
+                            + unknown_audio_track_count
+                            + unknown_subtitle_track_count
+                        )
+                        print("\n\t\t--- Tracks [" + str(tracks.__len__()) + "] ---")
+                        for track in tracks:
+                            print_track_info(track)
+                            if (track._track_type == "subtitles") and (
+                                track.language == "zxx" or track.language == "und"
+                            ):
+                                print(
+                                    "\t\t"
+                                    + "No Linguistic Content/Not Applicable track found!"
+                                )
+                                print("\t\t" + "Track language is unknown.")
+                                extension = set_extension(track)
+                                if str(track.track_name) != "None":
+                                    for sign in signs_keywords:
+                                        sign = str(
+                                            re.search(
+                                                sign,
+                                                track.track_name,
+                                                re.IGNORECASE,
                                             )
-                                            if sign != "None":
-                                                print(
-                                                    "\t\t"
-                                                    + "Track name contains a Signs keyword."
-                                                )
-                                                if total_audio_and_subtitle_tracks > 0:
+                                        )
+                                        if sign != "None":
+                                            print(
+                                                "\t\t"
+                                                + "Track name contains a Signs keyword."
+                                            )
+                                            if total_audio_and_subtitle_tracks > 0:
+                                                if (
+                                                    total_audio_and_subtitle_tracks % 2
+                                                ) == 0:
                                                     if (
-                                                        total_audio_and_subtitle_tracks
-                                                        % 2
-                                                    ) == 0:
+                                                        unknown_audio_track_count == 0
+                                                        and unknown_subtitle_track_count
+                                                        == 1
+                                                    ):
                                                         if (
-                                                            unknown_audio_track_count
-                                                            == 0
-                                                            and unknown_subtitle_track_count
-                                                            == 1
+                                                            total_audio_and_subtitle_tracks
+                                                            - (
+                                                                jpn_audio_track_count
+                                                                + eng_audio_track_count
+                                                                + jpn_subtitle_track_count
+                                                                + eng_subtitle_track_count
+                                                            )
+                                                            == unknown_subtitle_track_count
                                                         ):
-                                                            if (
+                                                            send_discord_message(
+                                                                "\tTrack determined to be english through process of elimination."
+                                                            )
+                                                            subprocess.Popen(
+                                                                [
+                                                                    "mkvpropedit",
+                                                                    full_path,
+                                                                    "--edit",
+                                                                    "track:"
+                                                                    + str(
+                                                                        track.track_id
+                                                                        + 1
+                                                                    ),
+                                                                    "--set",
+                                                                    "language=eng",
+                                                                ]
+                                                            )
+                                                            send_discord_message(
+                                                                "Track "
+                                                                + str(
+                                                                    track.track_id + 1
+                                                                )
+                                                                + " set to english on: "
+                                                                + full_path
+                                                            )
+                                                            break
+                                        elif eng_audio_track_count == 0:
+                                            print("\t\t" + "No recognized name track.")
+                                            if (
+                                                jpn_subtitle_track_count == 0
+                                                and jpn_audio_track_count == 1
+                                            ):
+                                                if (
+                                                    eng_subtitle_track_count == 0
+                                                    and eng_audio_track_count == 0
+                                                ):
+                                                    if (
+                                                        unknown_audio_track_count == 0
+                                                        and unknown_subtitle_track_count
+                                                        == 1
+                                                    ):
+                                                        if (
+                                                            (
                                                                 total_audio_and_subtitle_tracks
                                                                 - (
                                                                     jpn_audio_track_count
-                                                                    + eng_audio_track_count
                                                                     + jpn_subtitle_track_count
-                                                                    + eng_subtitle_track_count
                                                                 )
-                                                                == unknown_subtitle_track_count
-                                                            ):
-                                                                send_discord_message(
-                                                                    "\tTrack determined to be english through process of elimination."
-                                                                )
-                                                                subprocess.Popen(
-                                                                    [
-                                                                        "mkvpropedit",
-                                                                        full_path,
-                                                                        "--edit",
-                                                                        "track:"
-                                                                        + str(
-                                                                            track.track_id
-                                                                            + 1
-                                                                        ),
-                                                                        "--set",
-                                                                        "language=eng",
-                                                                    ]
-                                                                )
-                                                                send_discord_message(
-                                                                    "Track "
-                                                                    + str(
-                                                                        track.track_id
-                                                                        + 1
-                                                                    )
-                                                                    + " set to english on: "
-                                                                    + full_path
-                                                                )
-                                                                break
-                                            elif eng_audio_track_count == 0:
-                                                print(
-                                                    "\t\t" + "No recognized name track."
-                                                )
-                                                if (
-                                                    jpn_subtitle_track_count == 0
-                                                    and jpn_audio_track_count == 1
-                                                ):
-                                                    if (
-                                                        eng_subtitle_track_count == 0
-                                                        and eng_audio_track_count == 0
-                                                    ):
-                                                        if (
-                                                            unknown_audio_track_count
-                                                            == 0
-                                                            and unknown_subtitle_track_count
-                                                            == 1
+                                                            )
+                                                            == unknown_subtitle_track_count
                                                         ):
-                                                            if (
-                                                                (
-                                                                    total_audio_and_subtitle_tracks
-                                                                    - (
-                                                                        jpn_audio_track_count
-                                                                        + jpn_subtitle_track_count
-                                                                    )
-                                                                )
-                                                                == unknown_subtitle_track_count
-                                                            ):
-                                                                send_discord_message(
-                                                                    "\tTrack determined to be english through process of elimination."
-                                                                )
-                                                                subprocess.Popen(
-                                                                    [
-                                                                        "mkvpropedit",
-                                                                        full_path,
-                                                                        "--edit",
-                                                                        "track:"
-                                                                        + str(
-                                                                            track.track_id
-                                                                            + 1
-                                                                        ),
-                                                                        "--set",
-                                                                        "language=eng",
-                                                                    ]
-                                                                )
-                                                                send_discord_message(
-                                                                    "Track "
+                                                            send_discord_message(
+                                                                "\tTrack determined to be english through process of elimination."
+                                                            )
+                                                            subprocess.Popen(
+                                                                [
+                                                                    "mkvpropedit",
+                                                                    full_path,
+                                                                    "--edit",
+                                                                    "track:"
                                                                     + str(
                                                                         track.track_id
                                                                         + 1
-                                                                    )
-                                                                    + " set to english on: "
-                                                                    + full_path
+                                                                    ),
+                                                                    "--set",
+                                                                    "language=eng",
+                                                                ]
+                                                            )
+                                                            send_discord_message(
+                                                                "Track "
+                                                                + str(
+                                                                    track.track_id + 1
                                                                 )
-                                                                break
-                                            else:
-                                                print(
-                                                    "\t\t"
-                                                    + "Language could not be determined through process of elimination."
-                                                )
-                                                detect_subs_via_fasttext()
-                                    else:
-                                        print(
-                                            "\t\tTrack name is empty, TRACK: "
-                                            + str(track.track_id)
-                                            + "on "
-                                            + full_path
-                                        )
-                                        problematic_children.append(
-                                            "Track name is empty, TRACK: "
-                                            + str(track.track_id)
-                                            + " on "
-                                            + full_path
-                                        )
-                                        detect_subs_via_fasttext()
-                                #elif (
-                                    #(track._track_type == "subtitles")
-                                    #and track.language == "jpn"
-                                #) and not (
-                                    #re.search(
-                                        #"japanese", str(track.track_name), re.IGNORECASE
-                                    #)
-                                    #or re.search(
-                                        #r"\bjpn\b", str(track.track_name), re.IGNORECASE
-                                    #)
-                                #):
-                                    #extension = set_extension(track)
-                                    #detect_subs_via_fasttext()
-                                #elif (
-                                    #track._track_type == "subtitles"
-                                #) and track.language == "mul":
-                                    #extension = set_extension(track)
-                                    #detect_subs_via_fasttext()
+                                                                + " set to english on: "
+                                                                + full_path
+                                                            )
+                                                            break
+                                        else:
+                                            print(
+                                                "\t\t"
+                                                + "Language could not be determined through process of elimination."
+                                            )
+                                            detect_subs_via_fasttext(
+                                                track, extension, root, full_path
+                                            )
                                 else:
-                                    print("\n\t\t" + "No matching track found.\n")
-                        else:
-                            print(
-                                "\t"
-                                + "isSupportedByMKVMerge: "
-                                + str(isSupportedByMKVMerge)
-                            )
+                                    print(
+                                        "\t\tTrack name is empty, TRACK: "
+                                        + str(track.track_id)
+                                        + "on "
+                                        + full_path
+                                    )
+                                    problematic_children.append(
+                                        "Track name is empty, TRACK: "
+                                        + str(track.track_id)
+                                        + " on "
+                                        + full_path
+                                    )
+                                    detect_subs_via_fasttext(
+                                        track, extension, root, full_path
+                                    )
+                            #elif (
+                                #(track._track_type == "subtitles")
+                                #and track.language == "jpn"
+                            #) and not (
+                                #re.search(
+                                    #"japanese", str(track.track_name), re.IGNORECASE
+                                #)
+                                #or re.search(
+                                    #r"\bjpn\b", str(track.track_name), re.IGNORECASE
+                                #)
+                            #):
+                                #extension = set_extension(track)
+                                #detect_subs_via_fasttext(
+                                    #track, extension, root, full_path
+                                #)
+                            #elif (
+                                #track._track_type == "subtitles"
+                            #) and track.language == "mul":
+                                #extension = set_extension(track)
+                                #detect_subs_via_fasttext(
+                                    #track, extension, root, full_path
+                                #)
+                            else:
+                                print("\n\t\t" + "No matching track found.\n")
                     else:
-                        print("\t" + "isValidMKV: " + str(isMKVFile))
-                except KeyError:
-                    send_error_message("\t" + "Error with file: " + file)
-            else:
-                send_error_message("\n\tNot a valid file: " + full_path + "\n")
+                        print(
+                            "\t"
+                            + "isSupportedByMKVMerge: "
+                            + str(isSupportedByMKVMerge)
+                        )
+                else:
+                    print("\t" + "isValidMKV: " + str(isMKVFile))
+            except KeyError:
+                send_error_message("\t" + "Error with file: " + file)
+        else:
+            send_error_message("\n\tNot a valid file: " + full_path + "\n")
+
+
+if args.path and args.file:
+    send_error_message("\n\tCannot use both --path and --file at the same time.\n")
+elif args.path:
+    if os.path.isdir(path):
+        os.chdir(path)
+        for (
+            root,
+            dirs,
+            files,
+        ) in os.walk(path):
+            clean_and_sort(files, root, dirs)
+            print("\nCurrent Path: ", root + "\nDirectories: ", dirs)
+            print("Files: ", files)
+            start(files, root, dirs)
+elif args.file:
+    if os.path.isfile(file):
+        # just the file name
+        start([os.path.basename(file)], os.path.dirname(file), [])
+    else:
+        send_error_message("\n\tFile does not exist.\n")
+
+
 else:
     send_error_message("Invalid Directory: " + path + "\n")
 
