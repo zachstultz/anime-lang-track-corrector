@@ -130,7 +130,6 @@ def send_discord_message(message):
             url=discord_webhook_url, content=message, rate_limit_retry=True
         )
         webhook.execute()
-    print(message)
 
 
 # Prints the information about the given track
@@ -622,6 +621,20 @@ if discord_webhook_url != "":
     send_discord_message("Path: " + path)
 
 
+def check_for_sign_keywords(file, track):
+    for sign in signs_keywords:
+        sign = str(
+            re.search(
+                sign,
+                track.track_name,
+                re.IGNORECASE,
+            )
+        )
+        if sign != "None":
+            return True
+    return False
+
+
 def start(files, root, dirs):
     for file in files:
         full_path = os.path.join(root, file)
@@ -684,115 +697,160 @@ def start(files, root, dirs):
                                 print("\t\t" + "Track language is unknown.")
                                 extension = set_extension(track)
                                 if str(track.track_name) != "None":
-                                    for sign in signs_keywords:
-                                        sign = str(
-                                            re.search(
-                                                sign,
-                                                track.track_name,
-                                                re.IGNORECASE,
-                                            )
+                                    sign = check_for_sign_keywords(
+                                        track.track_name, track
+                                    )
+                                    if sign != "None":
+                                        print(
+                                            "\t\t"
+                                            + "Track name contains a Signs keyword."
                                         )
-                                        if sign != "None":
-                                            print(
-                                                "\t\t"
-                                                + "Track name contains a Signs keyword."
-                                            )
-                                            if total_audio_and_subtitle_tracks > 0:
+                                        if total_audio_and_subtitle_tracks > 0:
+                                            if (
+                                                total_audio_and_subtitle_tracks % 2
+                                            ) == 0:
                                                 if (
-                                                    total_audio_and_subtitle_tracks % 2
-                                                ) == 0:
+                                                    unknown_audio_track_count == 0
+                                                    and unknown_subtitle_track_count
+                                                    == 1
+                                                ):
                                                     if (
-                                                        unknown_audio_track_count == 0
-                                                        and unknown_subtitle_track_count
-                                                        == 1
+                                                        total_audio_and_subtitle_tracks
+                                                        - (
+                                                            jpn_audio_track_count
+                                                            + eng_audio_track_count
+                                                            + jpn_subtitle_track_count
+                                                            + eng_subtitle_track_count
+                                                        )
+                                                        == unknown_subtitle_track_count
                                                     ):
-                                                        if (
+                                                        send_discord_message(
+                                                            "\tTrack determined to be english through process of elimination."
+                                                        )
+                                                        subprocess.Popen(
+                                                            [
+                                                                "mkvpropedit",
+                                                                full_path,
+                                                                "--edit",
+                                                                "track:"
+                                                                + str(
+                                                                    track.track_id + 1
+                                                                ),
+                                                                "--set",
+                                                                "language=eng",
+                                                            ]
+                                                        )
+                                                        send_discord_message(
+                                                            "Track "
+                                                            + str(track.track_id + 1)
+                                                            + " set to english on: "
+                                                            + full_path
+                                                        )
+                                                    else:
+                                                        print(
+                                                            "\t\tLanguage could not be determined through process of elimination."
+                                                        )
+                                                        detect_subs_via_fasttext(
+                                                            track,
+                                                            extension,
+                                                            root,
+                                                            full_path,
+                                                        )
+                                                else:
+                                                    print(
+                                                        "\t\tLanguage could not be determined through process of elimination."
+                                                    )
+                                                    detect_subs_via_fasttext(
+                                                        track,
+                                                        extension,
+                                                        root,
+                                                        full_path,
+                                                    )
+                                            else:
+                                                print(
+                                                    "\t\tLanguage could not be determined through process of elimination."
+                                                )
+                                                detect_subs_via_fasttext(
+                                                    track, extension, root, full_path
+                                                )
+                                        else:
+                                            print(
+                                                "\t\tLanguage could not be determined through process of elimination."
+                                            )
+                                            detect_subs_via_fasttext(
+                                                track, extension, root, full_path
+                                            )
+                                    elif eng_audio_track_count == 0:
+                                        print("\t\t" + "No recognized name track.")
+                                        if (
+                                            jpn_subtitle_track_count == 0
+                                            and jpn_audio_track_count == 1
+                                        ):
+                                            if (
+                                                eng_subtitle_track_count == 0
+                                                and eng_audio_track_count == 0
+                                            ):
+                                                if (
+                                                    unknown_audio_track_count == 0
+                                                    and unknown_subtitle_track_count
+                                                    == 1
+                                                ):
+                                                    if (
+                                                        (
                                                             total_audio_and_subtitle_tracks
                                                             - (
                                                                 jpn_audio_track_count
-                                                                + eng_audio_track_count
                                                                 + jpn_subtitle_track_count
-                                                                + eng_subtitle_track_count
                                                             )
-                                                            == unknown_subtitle_track_count
-                                                        ):
-                                                            send_discord_message(
-                                                                "\tTrack determined to be english through process of elimination."
-                                                            )
-                                                            subprocess.Popen(
-                                                                [
-                                                                    "mkvpropedit",
-                                                                    full_path,
-                                                                    "--edit",
-                                                                    "track:"
-                                                                    + str(
-                                                                        track.track_id
-                                                                        + 1
-                                                                    ),
-                                                                    "--set",
-                                                                    "language=eng",
-                                                                ]
-                                                            )
-                                                            send_discord_message(
-                                                                "Track "
-                                                                + str(
-                                                                    track.track_id + 1
-                                                                )
-                                                                + " set to english on: "
-                                                                + full_path
-                                                            )
-                                                            break
-                                        elif eng_audio_track_count == 0:
-                                            print("\t\t" + "No recognized name track.")
-                                            if (
-                                                jpn_subtitle_track_count == 0
-                                                and jpn_audio_track_count == 1
-                                            ):
-                                                if (
-                                                    eng_subtitle_track_count == 0
-                                                    and eng_audio_track_count == 0
-                                                ):
-                                                    if (
-                                                        unknown_audio_track_count == 0
-                                                        and unknown_subtitle_track_count
-                                                        == 1
+                                                        )
+                                                        == unknown_subtitle_track_count
                                                     ):
-                                                        if (
-                                                            (
-                                                                total_audio_and_subtitle_tracks
-                                                                - (
-                                                                    jpn_audio_track_count
-                                                                    + jpn_subtitle_track_count
-                                                                )
-                                                            )
-                                                            == unknown_subtitle_track_count
-                                                        ):
-                                                            send_discord_message(
-                                                                "\tTrack determined to be english through process of elimination."
-                                                            )
-                                                            subprocess.Popen(
-                                                                [
-                                                                    "mkvpropedit",
-                                                                    full_path,
-                                                                    "--edit",
-                                                                    "track:"
-                                                                    + str(
-                                                                        track.track_id
-                                                                        + 1
-                                                                    ),
-                                                                    "--set",
-                                                                    "language=eng",
-                                                                ]
-                                                            )
-                                                            send_discord_message(
-                                                                "Track "
+                                                        send_discord_message(
+                                                            "\tTrack determined to be english through process of elimination."
+                                                        )
+                                                        subprocess.Popen(
+                                                            [
+                                                                "mkvpropedit",
+                                                                full_path,
+                                                                "--edit",
+                                                                "track:"
                                                                 + str(
                                                                     track.track_id + 1
-                                                                )
-                                                                + " set to english on: "
-                                                                + full_path
-                                                            )
-                                                            break
+                                                                ),
+                                                                "--set",
+                                                                "language=eng",
+                                                            ]
+                                                        )
+                                                        send_discord_message(
+                                                            "Track "
+                                                            + str(track.track_id + 1)
+                                                            + " set to english on: "
+                                                            + full_path
+                                                        )
+                                                    else:
+                                                        print(
+                                                            "\t\tLanguage could not be determined through process of elimination."
+                                                        )
+                                                        detect_subs_via_fasttext(
+                                                            track,
+                                                            extension,
+                                                            root,
+                                                            full_path,
+                                                        )
+                                                else:
+                                                    print(
+                                                        "\t\tLanguage could not be determined through process of elimination."
+                                                    )
+                                                detect_subs_via_fasttext(
+                                                    track, extension, root, full_path
+                                                )
+                                            else:
+                                                print(
+                                                    "\t\tLanguage could not be determined through process of elimination."
+                                                )
+                                                detect_subs_via_fasttext(
+                                                    track, extension, root, full_path
+                                                )
                                         else:
                                             print(
                                                 "\t\t"
@@ -801,6 +859,14 @@ def start(files, root, dirs):
                                             detect_subs_via_fasttext(
                                                 track, extension, root, full_path
                                             )
+                                    else:
+                                        print(
+                                            "\t\t"
+                                            + "Language could not be determined through process of elimination."
+                                        )
+                                        detect_subs_via_fasttext(
+                                            track, extension, root, full_path
+                                        )
                                 else:
                                     print(
                                         "\t\tTrack name is empty, TRACK: "
@@ -870,8 +936,8 @@ elif args.path:
             print("Files: ", files)
             start(files, root, dirs)
 elif args.file:
+    send_discord_message("\n\tFile: " + args.file)
     if os.path.isfile(file):
-        # just the file name
         start([os.path.basename(file)], os.path.dirname(file), [])
     else:
         send_error_message("\n\tFile does not exist.\n")
