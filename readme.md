@@ -58,19 +58,22 @@ sudo apt-get install xvfb
 
 ## Usage
 ```
-usage: anime_lang_track_corrector.py [-h] [path] [webhook_url]
+usage: anime_lang_track_corrector.py [-h] [-p PATH] [-f FILE] [-wh WEBHOOK]
 
-My anime language track corrector script.
-
-positional arguments:
-  path         The path to be passed in and scanned.
-  webhook_url  The optional discord webhook url
+A script that corrects undetermined and not applicable subtitle flags within
+mkv files for anime.
 
 optional arguments:
-  -h, --help   show this help message and exit
+  -h, --help            show this help message and exit
+  -p PATH, --path PATH  The path to the anime folder to be scanned by
+                        os.walk()
+  -f FILE, --file FILE  The individual video file to be processed.
+  -wh WEBHOOK, --webhook WEBHOOK
+                        The optional discord webhook url to be pinged about
+                        changes and errors.
 ```
 ```
-EX: python3 anime_lang_track_corrector.py "/folder/to/anime" "https://discord.com/api/webhooks/WEBHOOK_KEY" #The webhook is optional
+EX: python3 anime_lang_track_corrector.py -p "/folder/to/anime" -wh "https://discord.com/api/webhooks/WEBHOOK_KEY"
 ```
 
 ## Goals
