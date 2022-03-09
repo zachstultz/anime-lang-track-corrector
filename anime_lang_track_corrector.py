@@ -216,6 +216,7 @@ def set_track_language(path, track, language_code, full_path):
 def check_and_set_result_two(
     match_result, full_path, track, lang_code, output_file_with_path, root
 ):
+    file = os.path.basename(full_path)
     match_result_percent = str(match_result) + "%"
     if match_result > required_lang_match_percentage:
         send_discord_message(
@@ -249,6 +250,7 @@ def check_and_set_result(
     original_subtitle_array,
     root,
 ):
+    file = os.path.basename(full_path)
     match_result_percent = str(match_result) + "%"
     if match_result > required_lang_match_percentage:
         send_discord_message(
