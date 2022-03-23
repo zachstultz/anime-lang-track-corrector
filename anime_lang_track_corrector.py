@@ -272,7 +272,7 @@ def check_and_set_result(
             + str(required_lang_match_percentage)
             + "%, no match found.\n"
         )
-        #if match_result > 10:
+        #if match_result >= 10:
             #remove_signs_and_subs(
                 #files, file, original_subtitle_array, tracks, root, track, file
             #)
@@ -419,7 +419,7 @@ def find_files_by_release_group(release_group, files):
     for file in files:
         if re.search(release_group, file, flags=re.IGNORECASE):
             found.append(file)
-    found.sort()
+    # found.sort()
     return found
 
 
@@ -619,8 +619,8 @@ def clean_and_sort(files, root, dirs):
     remove_hidden_files(files, root)
     if len(ignored_folders) != 0:
         dirs[:] = [d for d in dirs if d not in ignored_folders]
-    dirs.sort()
-    files.sort()
+    # dirs.sort()
+    # files.sort()
     for file in files[:]:
         fileIsTrailer = str(re.search("trailer", str(file), re.IGNORECASE))
         fileEndsWithMKV = file.endswith(".mkv")
@@ -634,7 +634,7 @@ def search_track_for_language_keyword(path, track, lang_code, root, full_path):
     ):
         send_discord_message("\t\t" + "English keyword found in track name.")
         send_discord_message("\t\t" + "Setting track language to english.")
-        set_track_language(os.path.join(root, file), track, lang_code, full_path)
+        set_track_language(full_path, track, lang_code, full_path)
         return True
     else:
         print("\n\t\t" + "No language keyword found in track name.")
@@ -936,30 +936,8 @@ def start(files, root, dirs):
                                     detect_subs_via_fasttext(
                                         track, extension, root, full_path, tracks
                                     )
-                            #elif (
-                                #(track._track_type == "subtitles")
-                                #and track.language == "jpn"
-                            #) and not (
-                                #re.search(
-                                    #"japanese", str(track.track_name), re.IGNORECASE
-                                #)
-                                #or re.search(
-                                    #r"\bjpn\b", str(track.track_name), re.IGNORECASE
-                                #)
-                            #):
-                                #extension = set_extension(track)
-                                #detect_subs_via_fasttext(
-                                    #track, extension, root, full_path, tracks
-                                #)
-                            #elif (
-                                #track._track_type == "subtitles"
-                            #) and track.language == "mul":
-                                #extension = set_extension(track)
-                                #detect_subs_via_fasttext(
-                                    #track, extension, root, full_path, tracks
-                                #)
-                            #else:
-                                #print("\n\t\t" + "No matching track found.\n")
+                            else:
+                                print("\n\t\t" + "No matching track found.\n")
                     else:
                         print(
                             "\t"
