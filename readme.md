@@ -73,7 +73,7 @@ optional arguments:
                         changes and errors.
 ```
 ```
-EX: python3 anime_lang_track_corrector.py -p "/folder/to/anime" -wh "https://discord.com/api/webhooks/WEBHOOK_KEY"
+EX: python3 anime_lang_track_corrector.py -p "/folder/to/anime" -wh "WEBHOOK_URL"
 ```
 
 ## Goals
