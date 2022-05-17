@@ -15,24 +15,24 @@ That is the purpose of this program, in my case, for use with plex. Plex can ver
 4. Download the portable version of Subtitle Edit (and not the installer). https://github.com/SubtitleEdit/subtitleedit/releases
 5. Install the dependencies for Subtitle Edit:
 
-  Packages required for Ubuntu based distros:
-  ```
-  sudo apt-get install mono-complete
-  sudo apt-get install libhunspell-dev
-  sudo apt-get install libmpv-dev (libmpv.so)
-  sudo apt-get install tesseract-ocr
-  sudo apt-get install vlc (already installed on some distros, SE uses (libvlc.so))
-  sudo apt-get install ffmpeg (already installed on some distros)
-  ```
-  Packages required for Arch based distros (like Manjaro):
-  ```
-  sudo pacman -S mono
-  sudo pacman -S mpv
-  sudo pacman -S hunspell
-  sudo pacman -S ttf-dejavu (Unicode font)
-  sudo pacman -S tesseract
-  sudo pacman -S tesseract-data-eng (or install via "sudo mono SubtitleEdit.exe")
-  ```
+    Packages required for Ubuntu based distros
+    ```
+    sudo apt-get install mono-complete
+    sudo apt-get install libhunspell-dev
+    sudo apt-get install libmpv-dev (libmpv.so)
+    sudo apt-get install tesseract-ocr
+    sudo apt-get install vlc (already installed on some distros, SE uses (libvlc.so))
+    sudo apt-get install ffmpeg (already installed on some distros)
+    ```
+    Packages required for Arch based distros (like Manjaro)
+    ```
+    sudo pacman -S mono
+    sudo pacman -S mpv
+    sudo pacman -S hunspell
+    sudo pacman -S ttf-dejavu (Unicode font)
+    sudo pacman -S tesseract
+    sudo pacman -S tesseract-data-eng (or install via "sudo mono SubtitleEdit.exe")
+    ```
 6. Install XVFB
 ```
 sudo apt-get install xvfb
