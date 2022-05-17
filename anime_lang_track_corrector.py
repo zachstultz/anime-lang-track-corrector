@@ -1,4 +1,3 @@
-from genericpath import isfile
 import os
 import sys
 import platform
@@ -7,7 +6,7 @@ import subprocess
 import pymkv
 import fasttext
 import argparse
-from typing import Text
+from genericpath import isfile
 from pysubparser import parser
 from discord_webhook import DiscordWebhook
 from datetime import datetime
@@ -61,6 +60,12 @@ p.add_argument(
     help="The optional discord webhook url to be pinged about changes and errors.",
     required=False,
 )
+p.add_argument(
+    "-lmp",
+    "--lang-match-percentage",
+    help="The percentage of the detected file language required for the language to be set.",
+    required=False,
+)
 args = p.parse_args()
 # parse the arguments
 if args.path:
@@ -76,6 +81,8 @@ if args.webhook:
     discord_webhook_url = args.webhook
 else:
     discord_webhook_url = ""
+if args.lang_match_percentage:
+    required_lang_match_percentage = int(args.lang_match_percentage)
 
 
 # Removes the file if it exists, used for cleaning up after FastText detection
@@ -118,8 +125,9 @@ def send_error_message(message):
 
 
 # Appends, sends, and prints our change message
-def send_change_message(message):
-    items_changed.append(message)
+def send_message(message, add_to_changed=False):
+    if add_to_changed:
+        items_changed.append(message)
     send_discord_message(message)
     print(message)
 
@@ -192,7 +200,17 @@ def extract_output_subtitle_file_and_convert(file_name, track, full_path, root):
         send_error_message("Extraction failed: " + outputted_file + "\n")
 
 
-def set_track_language(path, track, language_code, full_path):
+def set_track_language(path, track, language_code):
+    # subprocess.Popen(
+    #     [
+    #         "mkvpropedit",
+    #         path,
+    #         "--edit",
+    #         "track:" + str(track.track_id + 1),
+    #         "--set",
+    #         "language-ietf=" + language_code,
+    #     ]
+    # )
     subprocess.Popen(
         [
             "mkvpropedit",
@@ -203,14 +221,8 @@ def set_track_language(path, track, language_code, full_path):
             "language=" + language_code,
         ]
     )
-    # subprocess.Popen(["mkvpropedit", path,"--edit","track:" + str(track.track_id+1),"--set","language-ietf=" + language_code])
-    send_change_message(
-        "\t\tTrack set to "
-        + language_code
-        + ": "
-        + full_path
-        + " Track: "
-        + str(track.track_id + 1)
+    send_message(
+        "\t\tTrack: " + str(track.track_id + 1) + " set to: " + language_code, True
     )
 
 
@@ -220,12 +232,12 @@ def check_and_set_result_two(
     file = os.path.basename(full_path)
     match_result_percent = str(match_result) + "%"
     if match_result > required_lang_match_percentage:
-        send_discord_message(
-            "\n\t\tFile: " + file + "\n\t\tMatch: " + match_result_percent
-        )
-        print("\t\tSubtitle file detected as english.")
-        print("\t\tSetting english on track within mkv")
-        set_track_language(full_path, track, lang_code, full_path)
+        full_language_keyword = Language.make(
+            language=standardize_tag(lang_code)
+        ).display_name()
+        send_message("\n\t\tFile: " + file + "\n\t\tMatch: " + match_result_percent)
+        print("\t\tSubtitle file detected as " + full_language_keyword)
+        set_track_language(full_path, track, lang_code)
         remove_file(output_file_with_path)
         return 1
     else:
@@ -255,12 +267,9 @@ def check_and_set_result(
     file = os.path.basename(full_path)
     match_result_percent = str(match_result) + "%"
     if match_result > required_lang_match_percentage:
-        send_discord_message(
-            "\n\t\tFile: " + file + "\n\t\tMatch: " + match_result_percent
-        )
-        print("\t\tSubtitle file detected as english.")
-        print("\t\tSetting english on track within mkv")
-        set_track_language(full_path, track, lang_code, full_path)
+        send_message("\n\t\tFile: " + file + "\n\t\tMatch: " + match_result_percent)
+        print("\t\tSubtitle file detected as " + lang_code)
+        set_track_language(full_path, track, lang_code)
         remove_file(output_file_with_path)
     else:
         send_error_message(
@@ -279,11 +288,90 @@ def check_and_set_result(
         remove_file(output_file_with_path)
 
 
+lang_codes = [
+    "eng",
+    "spa",
+    "por",
+    "fra",
+    "deu",
+    "ita",
+    "jpn",
+    "kor",
+    "pol",
+    "rus",
+    "swe",
+    "tur",
+    "vie",
+    "ara",
+    "heb",
+    "cat",
+    "ces",
+    "dan",
+    "ell",
+    "fin",
+    "hun",
+    "ind",
+    "nor",
+    "nld",
+    "ron",
+    "slk",
+    "slv",
+    "srp",
+    "ukr",
+    "zho",
+]
+
+lang_codes_short = [
+    "en",
+    "sp",
+    "po",
+    "fr",
+    "de",
+    "it",
+    "jp",
+    "ko",
+    "po",
+    "ru",
+    "sw",
+    "tu",
+    "vi",
+    "ar",
+    "he",
+    "ca",
+    "ce",
+    "da",
+    "el",
+    "fi",
+    "hu",
+    "in",
+    "no",
+    "nl",
+    "ro",
+    "sl",
+    "sl",
+    "sr",
+    "uk",
+    "zh",
+]
+
+
 def detect_subs_via_fasttext(track, extension, root, full_path, tracks):
-    eng_keyword_search_and_set = search_track_for_language_keyword(
-        path, track, "eng", root, full_path
-    )
-    if not eng_keyword_search_and_set:
+    lang_keyword_search = ""
+    lang_keyword_search_short = ""
+    for code in lang_codes:
+        lang_keyword_search = search_track_for_language_keyword(
+            path, track, code, root, full_path
+        )
+        if lang_keyword_search is not None:
+            break
+    if not lang_keyword_search:
+        for code in lang_codes_short:
+            lang_keyword_search_short = search_track_for_language_keyword(
+                path, track, code, root, full_path
+            )
+            if lang_keyword_search_short is not None:
+                break
+    if not lang_keyword_search and not lang_keyword_search_short:
         print("\t\t" + "File will be extracted and detection will be attempted.")
         print("\t\t" + "Extracting test file to " + root)
         try:
@@ -409,6 +497,7 @@ def convert_subtitle_file(output_file_with_path):
             return converted_file
         else:
             send_error_message("Conversion failed on: " + output_file_with_path)
+            remove_file(output_file_with_path)
         return converted_file
     else:
         return output_file_with_path
@@ -446,7 +535,7 @@ def print_similar_releases(comparision_releases):
 
 
 def check_tracks(tracks, comparision_full_path, original_files_results, root, track):
-    send_discord_message("\t\tChecking internal subtitle tracks as comparision.")
+    send_message("\t\tChecking internal subtitle tracks as comparision.")
     for comparision_track in tracks:
         if comparision_track._track_type == "subtitles":
             print_track_info(comparision_track)
@@ -497,10 +586,8 @@ def check_tracks(tracks, comparision_full_path, original_files_results, root, tr
                                 return True
                 else:
                     print("\t\tNot enough duplicates found in track.")
-    send_discord_message(
-        "\t\tLanguage could not be determined through internal tracks."
-    )
-    send_discord_message("\t\tChecking externally...")
+    send_message("\t\tLanguage could not be determined through internal tracks.")
+    send_message("\t\tChecking externally...")
     return False
 
 
@@ -608,11 +695,11 @@ def remove_signs_and_subs(
                     print(e)
                     return
             else:
-                send_discord_message(
+                send_message(
                     "\t\tNo similar release found for: " + file + " at " + root
                 )
     else:
-        send_discord_message("\t\tSuccessfully set through internal subs")
+        send_message("\t\tSuccessfully set through internal subs")
 
 
 def clean_and_sort(files, root, dirs):
@@ -629,12 +716,16 @@ def clean_and_sort(files, root, dirs):
 
 
 def search_track_for_language_keyword(path, track, lang_code, root, full_path):
-    if re.search("english", str(track.track_name), re.IGNORECASE) or re.search(
-        r"\beng\b", str(track.track_name), re.IGNORECASE
-    ):
-        send_discord_message("\t\t" + "English keyword found in track name.")
-        send_discord_message("\t\t" + "Setting track language to english.")
-        set_track_language(full_path, track, lang_code, full_path)
+    full_language_keyword = Language.make(
+        language=standardize_tag(lang_code)
+    ).display_name()
+    if re.search(
+        full_language_keyword,
+        str(track.track_name),
+        re.IGNORECASE,
+    ) or re.search(rf"\b{lang_code}\b", str(track.track_name), re.IGNORECASE):
+        send_message("\t\t" + full_language_keyword + " keyword found in track name.")
+        set_track_language(full_path, track, lang_code)
         return True
     else:
         print("\n\t\t" + "No language keyword found in track name.")
@@ -643,11 +734,11 @@ def search_track_for_language_keyword(path, track, lang_code, root, full_path):
 
 # The execution start of the program
 if discord_webhook_url != "":
-    send_discord_message("")
-    send_discord_message("\n[START]-------------------------------------------[START]")
-    send_discord_message("Start Time: " + str(datetime.now()))
-    send_discord_message("Script: anime_lang_track_corrector.py")
-    send_discord_message("Path: " + path)
+    send_message("")
+    send_message("\n[START]-------------------------------------------[START]")
+    send_message("Start Time: " + str(datetime.now()))
+    send_message("Script: anime_lang_track_corrector.py")
+    send_message("Path: " + path)
 
 
 def check_for_sign_keywords(file, track):
@@ -754,27 +845,13 @@ def start(files, root, dirs):
                                                         )
                                                         == unknown_subtitle_track_count
                                                     ):
-                                                        send_discord_message(
+                                                        send_message(
                                                             "\tTrack determined to be english through process of elimination."
                                                         )
-                                                        subprocess.Popen(
-                                                            [
-                                                                "mkvpropedit",
-                                                                full_path,
-                                                                "--edit",
-                                                                "track:"
-                                                                + str(
-                                                                    track.track_id + 1
-                                                                ),
-                                                                "--set",
-                                                                "language=eng",
-                                                            ]
-                                                        )
-                                                        send_discord_message(
-                                                            "Track "
-                                                            + str(track.track_id + 1)
-                                                            + " set to english on: "
-                                                            + full_path
+                                                        set_track_language(
+                                                            full_path,
+                                                            track.track_id,
+                                                            "eng",
                                                         )
                                                     else:
                                                         print(
@@ -845,27 +922,13 @@ def start(files, root, dirs):
                                                         )
                                                         == unknown_subtitle_track_count
                                                     ):
-                                                        send_discord_message(
+                                                        send_message(
                                                             "\tTrack determined to be english through process of elimination."
                                                         )
-                                                        subprocess.Popen(
-                                                            [
-                                                                "mkvpropedit",
-                                                                full_path,
-                                                                "--edit",
-                                                                "track:"
-                                                                + str(
-                                                                    track.track_id + 1
-                                                                ),
-                                                                "--set",
-                                                                "language=eng",
-                                                            ]
-                                                        )
-                                                        send_discord_message(
-                                                            "Track "
-                                                            + str(track.track_id + 1)
-                                                            + " set to english on: "
-                                                            + full_path
+                                                        set_track_language(
+                                                            full_path,
+                                                            track.track_id,
+                                                            "eng",
                                                         )
                                                     else:
                                                         print(
@@ -949,7 +1012,11 @@ def start(files, root, dirs):
             except KeyError:
                 send_error_message("\t" + "Error with file: " + file)
         else:
-            send_error_message("\n\tNot a valid file: " + full_path + "\n")
+            send_error_message(
+                "\n\tNot a valid file (do you have mkvtoolnix installed?): "
+                + full_path
+                + "\n"
+            )
 
 
 if args.path and args.file:
@@ -969,7 +1036,7 @@ elif args.path:
     else:
         send_error_message("\n\tNot a valid path: " + path + "\n")
 elif args.file:
-    send_discord_message("\n\tFile: " + args.file)
+    send_message("\n\tFile: " + args.file)
     if os.path.isfile(file):
         start([os.path.basename(file)], os.path.dirname(file), [])
     else:
@@ -977,13 +1044,13 @@ elif args.file:
 
 
 if len(problematic_children) != 0:
-    send_discord_message("\n\t--- Errors ---")
+    send_message("\n\t--- Errors ---")
     for problem in problematic_children:
-        send_discord_message(str(problem) + "\n")
+        send_message(str(problem) + "\n")
 if len(items_changed) != 0:
-    send_discord_message("\n\t--- Items Changed ---")
+    send_message("\n\t--- Items Changed ---")
     for item in items_changed:
-        send_discord_message(str(item) + "\n")
+        send_message(str(item) + "\n")
 
-send_discord_message("\nTotal Execution Time: " + str((datetime.now() - startTime)))
-send_discord_message("[END]-------------------------------------------[END]\n")
+send_message("\nTotal Execution Time: " + str((datetime.now() - startTime)))
+send_message("[END]-------------------------------------------[END]\n")
