@@ -362,14 +362,14 @@ def detect_subs_via_fasttext(track, extension, root, full_path, tracks):
         lang_keyword_search = search_track_for_language_keyword(
             path, track, code, root, full_path
         )
-        if lang_keyword_search is not None:
+        if lang_keyword_search:
             break
     if not lang_keyword_search:
         for code in lang_codes_short:
             lang_keyword_search_short = search_track_for_language_keyword(
                 path, track, code, root, full_path
             )
-            if lang_keyword_search_short is not None:
+            if lang_keyword_search_short:
                 break
     if not lang_keyword_search and not lang_keyword_search_short:
         print("\t\t" + "File will be extracted and detection will be attempted.")
