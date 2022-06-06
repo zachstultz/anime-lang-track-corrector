@@ -22,6 +22,9 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 PRETRAINED_MODEL_PATH = os.path.join(ROOT_DIR, "lid.176.bin")
 model = fasttext.load_model(PRETRAINED_MODEL_PATH)
 
+# Subtitle extraction location
+subtitle_location = os.path.join(ROOT_DIR, "subs_test")
+
 # The required percentage that must be met when detecting an individual language with FastText
 required_lang_match_percentage = 70
 
@@ -38,6 +41,9 @@ path_to_subtitle_edit_linux = ""
 # Signs & Full keyword arrays, add any keywords you want to be searched for
 signs_keywords = ["sign", "music", "song"]
 full_keywords = ["full", "dialog", "dialogue", "english subs"]
+
+track_languages_to_check = ["zxx", "und"]
+
 
 # Folders to ignore
 ignored_folders = []
@@ -126,15 +132,17 @@ def send_error_message(message):
 
 # Appends, sends, and prints our change message
 def send_message(message, add_to_changed=False):
-    if add_to_changed:
-        items_changed.append(message)
-    send_discord_message(message)
-    print(message)
+    if message:
+        if add_to_changed:
+            items_changed.append(message)
+        send_discord_message(message)
+        print(message)
 
 
 # Sends a discord message
 def send_discord_message(message):
-    if discord_webhook_url != "":
+    message = str(message)
+    if discord_webhook_url:
         webhook = DiscordWebhook(
             url=discord_webhook_url, content=message, rate_limit_retry=True
         )
@@ -201,29 +209,32 @@ def extract_output_subtitle_file_and_convert(file_name, track, full_path, root):
 
 
 def set_track_language(path, track, language_code):
-    # subprocess.Popen(
-    #     [
-    #         "mkvpropedit",
-    #         path,
-    #         "--edit",
-    #         "track:" + str(track.track_id + 1),
-    #         "--set",
-    #         "language-ietf=" + language_code,
-    #     ]
-    # )
-    subprocess.Popen(
-        [
-            "mkvpropedit",
-            path,
-            "--edit",
-            "track:" + str(track.track_id + 1),
-            "--set",
-            "language=" + language_code,
-        ]
-    )
-    send_message(
-        "\t\tTrack: " + str(track.track_id + 1) + " set to: " + language_code, True
-    )
+    try:
+        # subprocess.Popen(
+        #     [
+        #         "mkvpropedit",
+        #         path,
+        #         "--edit",
+        #         "track:" + str(track.track_id + 1),
+        #         "--set",
+        #         "language-ietf=" + language_code,
+        #     ]
+        # )
+        subprocess.Popen(
+            [
+                "mkvpropedit",
+                path,
+                "--edit",
+                "track:" + str(track.track_id + 1),
+                "--set",
+                "language=" + language_code,
+            ]
+        )
+        send_message(
+            "\t\tTrack: " + str(track.track_id + 1) + " set to: " + language_code, True
+        )
+    except Exception as e:
+        send_error_message(str(e) + "File: " + str(path))
 
 
 def check_and_set_result_two(
@@ -231,7 +242,7 @@ def check_and_set_result_two(
 ):
     file = os.path.basename(full_path)
     match_result_percent = str(match_result) + "%"
-    if match_result > required_lang_match_percentage:
+    if match_result >= required_lang_match_percentage:
         full_language_keyword = Language.make(
             language=standardize_tag(lang_code)
         ).display_name()
@@ -266,7 +277,7 @@ def check_and_set_result(
 ):
     file = os.path.basename(full_path)
     match_result_percent = str(match_result) + "%"
-    if match_result > required_lang_match_percentage:
+    if match_result >= required_lang_match_percentage:
         send_message("\n\t\tFile: " + file + "\n\t\tMatch: " + match_result_percent)
         print("\t\tSubtitle file detected as " + lang_code)
         set_track_language(full_path, track, lang_code)
@@ -372,18 +383,19 @@ def detect_subs_via_fasttext(track, extension, root, full_path, tracks):
             if lang_keyword_search_short:
                 break
     if not lang_keyword_search and not lang_keyword_search_short:
+        print("\n\t\t" + "No language keyword found in track name.")
         print("\t\t" + "File will be extracted and detection will be attempted.")
-        print("\t\t" + "Extracting test file to " + root)
+        print("\t\t" + "Extracting test file to " + subtitle_location)
         try:
             output_file_with_path = extract_output_subtitle_file_and_convert(
-                "lang_test" + "." + extension, track, full_path, root
+                "lang_test" + "." + extension, track, full_path, subtitle_location
             )
             if output_file_with_path is not None:
                 subtitle_lines_array = parse_subtitle_lines_into_array(
                     output_file_with_path
                 )
                 match_result = evaluate_subtitle_lines(subtitle_lines_array)
-                if match_result != 0:
+                if len(match_result) >= 2 and match_result[1] != 0:
                     if standardize_tag(track.language) != standardize_tag(
                         match_result[0]
                     ):
@@ -397,6 +409,11 @@ def detect_subs_via_fasttext(track, extension, root, full_path, tracks):
                             root,
                             tracks,
                         )
+                    else:
+                        print("\t\tCorrect language already set.")
+                        remove_file(output_file_with_path)
+                else:
+                    remove_file(output_file_with_path)
         except Exception as e:
             send_error_message(e)
             return
@@ -405,52 +422,49 @@ def detect_subs_via_fasttext(track, extension, root, full_path, tracks):
 
 
 def clean_subtitle_lines(lines):
-    clean = []
-    for line in lines:
-        line = re.sub(r"[-()\"#/@%\\;:<>{}`+=~|.!?,]", "", line.text)
-        line = re.sub(r"[\d\.]+", "", line)
-        if len(line) > 1 and line != "":
-            clean.append(line)
-    return clean
+    cleaned_lines = []
+    if lines and hasattr(lines[0], "text"):
+        lines = [x for x in lines if hasattr(x, "text") and x.text and len(x.text) > 1]
+        for line in lines:
+            line = str(line.text)
+            line = re.sub(r"(^[a-z$&+,:;=?@#|'<>.^*()%!-]*;)", "", str(line))
+            line = re.sub(r"[0-9$&+,:;=?@#|'<>.^*()%!-]", " ", str(line))
+            line = re.sub("(\s{2,})", " ", line).strip()
+            if line and len(line) > 1:
+                cleaned_lines.append(line)
+    elif lines:
+        lines = [x for x in lines if len(x) > 1]
+        for line in lines:
+            line = str(line)
+            line = re.sub(r"(^[a-z$&+,:;=?@#|'<>.^*()%!-]*;)", "", str(line))
+            line = re.sub(r"[0-9$&+,:;=?@#|'<>.^*()%!-]", " ", str(line))
+            line = re.sub("(\s{2,})", " ", line).strip()
+            if line and len(line) > 1:
+                cleaned_lines.append(line)
+    return cleaned_lines
 
 
-def clean_subtitle_line(line):
-    line = re.sub(r"[-()\"#/@%\\;:<>{}`+=~|.!?,]", "", line)
-    line = re.sub(r"[\d\.]+", "", line)
-    return line
-
-
-def evaluate_subtitle_lines(lines):
-    total_lines = lines.__len__()
+def evaluate_subtitle_lines(subtitles):
+    subtitles = clean_subtitle_lines(subtitles)
     results = []
-    for subtitle in lines:
+    for subtitle in subtitles:
         try:
-            pass_text = ""
-            if hasattr(subtitle, "text") and subtitle.text is not None:
-                pass_text = subtitle.text
-            elif subtitle != "" or subtitle is not None:
-                pass_text = subtitle
-            filtered = clean_subtitle_line(pass_text)
-            if filtered != "" and len(filtered) > 1:
-                result = re.sub(
-                    r"[-()\"#/@%\\;:<>{}`'+=~|.!?,]",
-                    "",
-                    str(model.predict(filtered)[0]).split("__label__", 1)[1],
-                )
-                print("\t\tLanguage Detected: " + result + " on " + filtered + "\t")
-                results.append(result)
-            # else:
-            # print("\t\tEmpty filtered subtitle.")
+            result = model.predict(subtitle)
+            result = re.sub(r"__label__", "", result[0][0])
+            print("\t\tLanguage Detected: " + result + " on " + subtitle + "\t")
+            results.append(result)
         except Exception:
             send_error_message(
-                "Error determining result of subtitle: " + str(subtitle.text)
+                "Error determining result of subtitle: " + str(subtitle)
             )
+    highest_lang_result = ""
+    highest_lang_result_percent = 0
     for result in results:
-        count = results.count(result)
-        percentage = (count / total_lines) * 100
-        if percentage >= required_lang_match_percentage:
-            return result, percentage
-    return 0
+        percentage = (results.count(result) / len(subtitles)) * 100
+        if percentage > highest_lang_result_percent:
+            highest_lang_result = result
+            highest_lang_result_percent = percentage
+    return highest_lang_result, highest_lang_result_percent
 
 
 def parse_subtitle_lines_into_array(input_file):
@@ -535,7 +549,7 @@ def print_similar_releases(comparision_releases):
 
 
 def check_tracks(tracks, comparision_full_path, original_files_results, root, track):
-    send_message("\t\tChecking internal subtitle tracks as comparision.")
+    send_message("\t\tChecking internal subtitle tracks for a comparision.")
     for comparision_track in tracks:
         if comparision_track._track_type == "subtitles":
             print_track_info(comparision_track)
@@ -544,7 +558,7 @@ def check_tracks(tracks, comparision_full_path, original_files_results, root, tr
                 "lang_comparison" + "." + extension,
                 comparision_track,
                 comparision_full_path,
-                root,
+                subtitle_location,
             )
             if output_file_with_path is not None:
                 comparision_subtitle_lines_array = parse_subtitle_lines_into_array(
@@ -568,7 +582,7 @@ def check_tracks(tracks, comparision_full_path, original_files_results, root, tr
                     )
                     print("\t\tRetesting original with duplicates removed.")
                     match_result = evaluate_subtitle_lines(original_files_results)
-                    if match_result != 0:
+                    if len(match_result) >= 2 and match_result[1] != 0:
                         if standardize_tag(match_result[0]) != standardize_tag(
                             track.language
                         ):
@@ -584,6 +598,10 @@ def check_tracks(tracks, comparision_full_path, original_files_results, root, tr
                             print("\t\t-- Comparision Attempt --")
                             if set_result == 1:
                                 return True
+                        else:
+                            remove_file(output_file_with_path)
+                    else:
+                        remove_file(output_file_with_path)
                 else:
                     print("\t\tNot enough duplicates found in track.")
     send_message("\t\tLanguage could not be determined through internal tracks.")
@@ -635,7 +653,7 @@ def remove_signs_and_subs(
                                         "lang_comparison" + "." + extension,
                                         comparision_track,
                                         comparision_full_path,
-                                        root,
+                                        subtitle_location,
                                     )
                                 )
                                 if output_file_with_path is not None:
@@ -671,7 +689,7 @@ def remove_signs_and_subs(
                                         match_result = evaluate_subtitle_lines(
                                             original_files_results
                                         )
-                                        if match_result != 0:
+                                        if len(match_result) >= 2 and match_result[1] != 0:
                                             if standardize_tag(
                                                 track.language
                                             ) != standardize_tag(match_result[0]):
@@ -687,6 +705,10 @@ def remove_signs_and_subs(
                                                 print("\t\t-- Comparision Attempt --")
                                                 if set_result == 1:
                                                     return
+                                            else:
+                                                remove_file(output_file_with_path)
+                                        else:
+                                            remove_file(output_file_with_path)
                                     else:
                                         print(
                                             "\t\tNot enough duplicates found in track."
@@ -706,8 +728,8 @@ def clean_and_sort(files, root, dirs):
     remove_hidden_files(files, root)
     if len(ignored_folders) != 0:
         dirs[:] = [d for d in dirs if d not in ignored_folders]
-    # dirs.sort()
-    # files.sort()
+    dirs.sort()
+    files.sort()
     for file in files[:]:
         fileIsTrailer = str(re.search("trailer", str(file), re.IGNORECASE))
         fileEndsWithMKV = file.endswith(".mkv")
@@ -724,12 +746,14 @@ def search_track_for_language_keyword(path, track, lang_code, root, full_path):
         str(track.track_name),
         re.IGNORECASE,
     ) or re.search(rf"\b{lang_code}\b", str(track.track_name), re.IGNORECASE):
-        send_message("\t\t" + full_language_keyword + " keyword found in track name.")
-        set_track_language(full_path, track, lang_code)
+        if standardize_tag(track.language) != standardize_tag(lang_code):
+            send_message("\t\tFile: " + full_path + "\n\t\t\t" + full_language_keyword + " keyword found in track name.")
+            set_track_language(full_path, track, lang_code)
+        else:
+            print("\t\tFile: " + full_path + "\n\t\t\t" + full_language_keyword + " keyword found in track name.")
+            print("\t\tCorrect language already set.")
         return True
-    else:
-        print("\n\t\t" + "No language keyword found in track name.")
-        return False
+    return False
 
 
 # The execution start of the program
@@ -808,14 +832,12 @@ def start(files, root, dirs):
                         for track in tracks:
                             print_track_info(track)
                             if (track._track_type == "subtitles") and (
-                                track.language == "zxx"
-                                or track.language == "und"
+                                track.language in track_languages_to_check
                             ):
                                 print(
                                     "\t\t"
-                                    + "No Linguistic Content/Not Applicable track found!"
+                                    + "Checking track..."
                                 )
-                                print("\t\t" + "Track language is unknown.")
                                 extension = set_extension(track)
                                 if str(track.track_name) != "None":
                                     sign = check_for_sign_keywords(
@@ -850,7 +872,7 @@ def start(files, root, dirs):
                                                         )
                                                         set_track_language(
                                                             full_path,
-                                                            track.track_id,
+                                                            track,
                                                             "eng",
                                                         )
                                                     else:
@@ -927,7 +949,7 @@ def start(files, root, dirs):
                                                         )
                                                         set_track_language(
                                                             full_path,
-                                                            track.track_id,
+                                                            track,
                                                             "eng",
                                                         )
                                                     else:
