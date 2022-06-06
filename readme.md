@@ -78,9 +78,7 @@ EX: python3 anime_lang_track_corrector.py -p "/folder/to/anime" -wh "WEBHOOK_URL
 
 ## Goals
 1. Rewrite script to use classes.
-2. Add support for setting all languages supported by fasttext, instead of just english.
-3. Move any values required to be set by the user, to a settings file.
-4. Massive code cleanup.
-5. Simplify README setup.
-6. Find alternative to Subtitles Edit, and eliminate that dependency.
-7. Offer langdetect as an alternative to fasttext.
+2. Massive code cleanup.
+3. Simplify README setup.
+4. Find alternative to Subtitles Edit, and eliminate that dependency.
+5. Offer langdetect as an alternative to fasttext.
