@@ -59,6 +59,7 @@ sudo apt-get install xvfb
 ## Usage
 ```
 usage: anime_lang_track_corrector.py [-h] [-p PATH] [-f FILE] [-wh WEBHOOK]
+                                     [-lmp LANG_MATCH_PERCENTAGE]
 
 A script that corrects undetermined and not applicable subtitle flags within
 mkv files for anime.
@@ -71,9 +72,12 @@ optional arguments:
   -wh WEBHOOK, --webhook WEBHOOK
                         The optional discord webhook url to be pinged about
                         changes and errors.
+  -lmp LANG_MATCH_PERCENTAGE, --lang-match-percentage LANG_MATCH_PERCENTAGE
+                        The percentage of the detected file language required
+                        for the language to be set.
 ```
 ```
-EX: python3 anime_lang_track_corrector.py -p "/folder/to/anime" -wh "WEBHOOK_URL"
+EX: python3 anime_lang_track_corrector.py -p "/folder/to/anime" -wh "WEBHOOK_URL" -lmp 70
 ```
 
 ## Goals
