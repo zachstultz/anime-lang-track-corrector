@@ -80,7 +80,7 @@ optional arguments:
 ```
 Example for a path:
 ```
-python3 anime_lang_track_corrector.py -p "/folder/to/anime" -wh "WEBHOOK_URL" -lmp 70
+python3 anime_lang_track_corrector.py -p "/path/to/anime" -wh "WEBHOOK_URL" -lmp 70
 ```
 
 Example for an individual file:
