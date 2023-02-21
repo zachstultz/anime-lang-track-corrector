@@ -78,8 +78,14 @@ optional arguments:
                         The percentage of the detected file language required
                         for the language to be set.
 ```
+Example for a path:
 ```
 EX: python3 anime_lang_track_corrector.py -p "/folder/to/anime" -wh "WEBHOOK_URL" -lmp 70
+```
+
+Example for an individual file:
+```
+EX: python3 anime_lang_track_corrector.py -f "/path/to/individual/file.mkv" -wh "WEBHOOK_URL" -lmp 70
 ```
 
 ## Goals
