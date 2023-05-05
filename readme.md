@@ -1,4 +1,4 @@
-(I initially wrote this when I was relearning python again after having not used it for quite a few years. The code base is pretty rough, it still accomplishes what I wanted it to, but badly needs a complete rewrite from the ground up. Just wanted to give a heads up to any fellow devs looking at the code lol.)
+(I initially wrote this when I was relearning python again after having not used it for quite a few years. The code base is pretty rough, it still accomplishes what I wanted it to, but badly needs a complete rewrite from the ground up. Just wanted to give a heads up to any fellow devs looking at the code.)
 
 # Anime-Lang-Track-Corrector
 An automation script that corrects undetermined and not applicable subtitle flags within mkv files for anime. 
