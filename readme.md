@@ -1,3 +1,5 @@
+(I initially wrote this when I was relearning python again after having not used it for quite a few years. The code base is pretty rough, it still accomplishes what I wanted it to, but badly needs a complete rewrite from the ground up. Just wanted to give a heads up to any fellow devs looking at the code lol.)
+
 # Anime-Lang-Track-Corrector
 An automation script that corrects undetermined and not applicable subtitle flags within mkv files for anime. 
 It goes through each mkv file, track-by-track and checks for any undetermined or not applicable marked subtitles, then, at first, attempts to correct it by process of elimination. If not by that, then by extracting the subtitle file to a readable format, parsing each subtitle line-by-line, and using a language detection module to determine the overall language of the file. Then, if the overall detected language of the file meets the required threshhold (default is 70%), then the file language flag is set with that language.
