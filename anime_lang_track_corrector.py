@@ -1,17 +1,16 @@
+import argparse
 import os
-import sys
 import platform
 import re
 import subprocess
-import pymkv
-import fasttext
-import argparse
-from genericpath import isfile
-from pysubparser import parser
-from discord_webhook import DiscordWebhook
 from datetime import datetime
+
+import fasttext
+import pymkv
 from chardet.universaldetector import UniversalDetector
+from discord_webhook import DiscordWebhook
 from langcodes import *
+from pysubparser import parser
 
 
 # The OS of the user
