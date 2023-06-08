@@ -12,7 +12,6 @@ from discord_webhook import DiscordWebhook
 from langcodes import *
 from pysubparser import parser
 
-
 # The OS of the user
 user_os = platform.system()
 
@@ -53,7 +52,7 @@ p = argparse.ArgumentParser(
 p.add_argument(
     "-p",
     "--path",
-    help="The path to the anime folder to be scanned by os.walk()",
+    help="The path to the anime folder to be scanned recursively.",
     required=False,
 )
 p.add_argument(
@@ -230,7 +229,13 @@ def set_track_language(path, track, language_code):
             ]
         )
         send_message(
-            "\t\tTrack: " + str(track.track_id + 1) + " set to: " + language_code, True
+            "\t\tFile: "
+            + str(path)
+            + "\n\t\tTrack: "
+            + str(track.track_id + 1)
+            + " set to: "
+            + language_code,
+            True,
         )
     except Exception as e:
         send_error_message(str(e) + "File: " + str(path))
@@ -453,9 +458,7 @@ def evaluate_subtitle_lines(subtitles):
             print("\t\tLanguage Detected: " + result + " on " + subtitle + "\t")
             results.append(result)
         except Exception:
-            send_error_message(
-                "Error determining result of subtitle: " + str(subtitle)
-            )
+            send_error_message("Error determining result of subtitle: " + str(subtitle))
     highest_lang_result = ""
     highest_lang_result_percent = 0
     for result in results:
@@ -688,7 +691,10 @@ def remove_signs_and_subs(
                                         match_result = evaluate_subtitle_lines(
                                             original_files_results
                                         )
-                                        if len(match_result) >= 2 and match_result[1] != 0:
+                                        if (
+                                            len(match_result) >= 2
+                                            and match_result[1] != 0
+                                        ):
                                             if standardize_tag(
                                                 track.language
                                             ) != standardize_tag(match_result[0]):
@@ -746,10 +752,22 @@ def search_track_for_language_keyword(path, track, lang_code, root, full_path):
         re.IGNORECASE,
     ) or re.search(rf"\b{lang_code}\b", str(track.track_name), re.IGNORECASE):
         if standardize_tag(track.language) != standardize_tag(lang_code):
-            send_message("\t\tFile: " + full_path + "\n\t\t\t" + full_language_keyword + " keyword found in track name.")
+            send_message(
+                "\t\tFile: "
+                + full_path
+                + "\n\t\t\t"
+                + full_language_keyword
+                + " keyword found in track name."
+            )
             set_track_language(full_path, track, lang_code)
         else:
-            print("\t\tFile: " + full_path + "\n\t\t\t" + full_language_keyword + " keyword found in track name.")
+            print(
+                "\t\tFile: "
+                + full_path
+                + "\n\t\t\t"
+                + full_language_keyword
+                + " keyword found in track name."
+            )
             print("\t\tCorrect language already set.")
         return True
     return False
@@ -833,10 +851,7 @@ def start(files, root, dirs):
                             if (track._track_type == "subtitles") and (
                                 track.language in track_languages_to_check
                             ):
-                                print(
-                                    "\t\t"
-                                    + "Checking track..."
-                                )
+                                print("\t\t" + "Checking track...")
                                 extension = set_extension(track)
                                 if str(track.track_name) != "None":
                                     sign = check_for_sign_keywords(
