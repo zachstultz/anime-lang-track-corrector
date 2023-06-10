@@ -48,7 +48,6 @@ startTime = datetime.now()
 # Stuff printed at the end
 items_changed = []
 errors = []
-pgs = []
 
 
 # Signs & Full keyword arrays, add any keywords you want to be searched for
@@ -499,7 +498,6 @@ def convert_subtitle_file(subtitle_file, source_file):
 
         if os.path.isfile(converted_file) and result.returncode == 0:
             print("\t\tConversion successful.")
-            print("\t\tRemoving unconverted file.")
             return converted_file
         else:
             send_error_message(
@@ -795,7 +793,7 @@ def start(files, root, dirs):
                 is_mkv_file = file.endswith(".mkv")
                 # is_mkv_file = pymkv.verify_matroska(full_path)
                 if is_mkv_file:
-                    print(f"\tisValidMKV: {is_mkv_file}")
+                    # print(f"\tisValidMKV: {is_mkv_file}")
                     is_supported_by_mkvmerge = pymkv.verify_supported(full_path)
                     if is_supported_by_mkvmerge:
                         print(f"\tisSupportedByMKVMerge: {is_supported_by_mkvmerge}")
@@ -805,8 +803,8 @@ def start(files, root, dirs):
                         handle_tracks(tracks, track_counts, root, full_path)
                     else:
                         print(f"\tisSupportedByMKVMerge: {is_supported_by_mkvmerge}")
-                else:
-                    print(f"\tisValidMKV: {is_mkv_file}")
+                # else:
+                #     print(f"\tisValidMKV: {is_mkv_file}")
             except Exception as e:
                 send_error_message(f"\tError with file: {file} ERROR: {str(e)}")
         else:
@@ -962,6 +960,7 @@ if __name__ == "__main__":
         send_message("\n\t--- Items Changed ---")
         for item in items_changed:
             send_message(str(item) + "\n")
+
 
     # Print execution time
     execution_time = datetime.now() - startTime
