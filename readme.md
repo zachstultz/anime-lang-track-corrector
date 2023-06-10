@@ -11,8 +11,6 @@ Best used in tandem with https://github.com/iwalton3/media-scripts/tree/master/f
 3. Install mkvtoolnix ```sudo apt-get install mkvtoolnix```
 4. Download the portable version of Subtitle Edit (and not the installer). https://github.com/SubtitleEdit/subtitleedit/releases
 5. Install the dependencies for Subtitle Edit (http://www.nikse.dk/subtitleedit/help#linux):
-
-    Packages required for Ubuntu based distros:
     ```
     sudo apt-get install mono-complete
     sudo apt-get install libhunspell-dev
