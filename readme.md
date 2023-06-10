@@ -4,11 +4,6 @@ It goes through each mkv file, track-by-track and checks for any undetermined or
 
 Best used in tandem with https://github.com/iwalton3/media-scripts/tree/master/force-signs in my opinion. Use my script to correct any unmarked languages, and his to force the signs.
 
-## Common Use Case
-You have an anime mkv file that has dual audio, so it has two english subtitle files within it. A subtitle for all dialogue to be used with the japanese audio, and a signs & songs subtitle for use with the english audio. But the problem is that the signs & songs or full subtitles language flag isn't set properly, it's showing as Undetermined or Not Applicable.
-
-That is the purpose of this program, in my case, for use with plex. Plex can very easily pick subtitles and audio for you automatically based on your preferences, but it can't do this when the tracks aren't marked with their proper language.
-
 ## Setup Instructions
 ### Linux (Ubuntu/Debian)
 1. Run ``` git clone https://github.com/zachstultz/anime-lang-track-corrector ```
