@@ -36,14 +36,14 @@ sudo apt-get install xvfb
 ```
 sudo apt-get install libgtk2.0-0
 ```
-8. Update path_to_subtitle_edit_linux at the top of the script with the path to that folder.
+8. Update path_to_subtitle_edit_linux in settings.py.
 ![Screen Shot 2021-09-15 at 3 24 02 PM](https://user-images.githubusercontent.com/8385256/133504275-382ebb15-e0de-4e15-8692-af1dc8acf748.png)
 9. Download the fasttext language model. Either the uncompressed(lid.176.bin) or compressed(lid.176.ftz). https://fasttext.cc/docs/en/language-identification.html
 10. Drag and drop the model into the root folder of the script.
 ![Screen Shot 2021-09-15 at 3 34 30 PM](https://user-images.githubusercontent.com/8385256/133505641-9b37a2ce-2679-452a-812b-5e3a72a86865.png)
-11. Change the model file name in the script, contained in the PRETRAINED_MODEL_PATH. (if you're using uncompressed, it's already set).
-![Screen Shot 2021-09-15 at 3 31 35 PM](https://user-images.githubusercontent.com/8385256/133505669-78bf2ec8-297c-4dc3-b79a-ba6c11501e09.png)
-12. Read the usage below and enjoy!
+11. Change the fasttext_model_name file name in settings.py (if you're using uncompressed, it's already set).
+![image](https://github.com/zachstultz/anime-lang-track-corrector/assets/8385256/c4a3262a-c281-40d4-8d47-1ab4019e33ed)
+13. Read the usage below and enjoy!
 ### Windows
 1. Download and install mkvtoolnix ```https://mkvtoolnix.download/downloads.html#windows```
 2. Add the mkvtoolnix folder location as a PATH in windows.
