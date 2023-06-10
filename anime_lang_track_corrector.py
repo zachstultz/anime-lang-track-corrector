@@ -427,6 +427,9 @@ def evaluate_subtitle_lines(subtitles):
     cleaned_subtitles = clean_subtitle_lines(subtitles)
     results = []
 
+    if not cleaned_subtitles:
+        return "", 0
+
     for subtitle in cleaned_subtitles:
         try:
             result = model.predict(subtitle)
@@ -790,21 +793,11 @@ def start(files, root, dirs):
             print(f"\n\tPath: {root}")
             print(f"\tFile: {file}")
             try:
-                is_mkv_file = file.endswith(".mkv")
-                # is_mkv_file = pymkv.verify_matroska(full_path)
-                if is_mkv_file:
-                    # print(f"\tisValidMKV: {is_mkv_file}")
-                    is_supported_by_mkvmerge = pymkv.verify_supported(full_path)
-                    if is_supported_by_mkvmerge:
-                        print(f"\tisSupportedByMKVMerge: {is_supported_by_mkvmerge}")
-                        tracks = get_mkv_tracks(full_path)
-                        track_counts = count_tracks(tracks)
-                        print(f"\n\t\t--- Tracks [{len(tracks)}] ---")
-                        handle_tracks(tracks, track_counts, root, full_path)
-                    else:
-                        print(f"\tisSupportedByMKVMerge: {is_supported_by_mkvmerge}")
-                # else:
-                #     print(f"\tisValidMKV: {is_mkv_file}")
+                if file.endswith(".mkv"):
+                    tracks = get_mkv_tracks(full_path)
+                    track_counts = count_tracks(tracks)
+                    print(f"\n\t\t--- Tracks [{len(tracks)}] ---")
+                    handle_tracks(tracks, track_counts, root, full_path)
             except Exception as e:
                 send_error_message(f"\tError with file: {file} ERROR: {str(e)}")
         else:
@@ -960,7 +953,6 @@ if __name__ == "__main__":
         send_message("\n\t--- Items Changed ---")
         for item in items_changed:
             send_message(str(item) + "\n")
-
 
     # Print execution time
     execution_time = datetime.now() - startTime
