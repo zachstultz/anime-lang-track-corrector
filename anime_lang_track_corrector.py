@@ -58,10 +58,6 @@ full_keywords = ["full", "dialog", "dialogue", "english subs"]
 track_languages_to_check = ["zxx", "und"]
 
 
-# Folders to ignore
-ignored_folders = []
-
-
 p = argparse.ArgumentParser(
     description="A script that corrects undetermined and not applicable subtitle flags within mkv files for anime."
 )
