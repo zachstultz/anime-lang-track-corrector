@@ -6,7 +6,7 @@ Best used in tandem with https://github.com/iwalton3/media-scripts/tree/master/f
 
 ## Setup Instructions
 ### Linux (Ubuntu/Debian)
-1. Run ``` git clone https://github.com/zachstultz/anime-lang-track-corrector ```
+1. Run ``` git clone https://github.com/zachstultz/anime-lang-track-corrector ``` or download above.
 2. Run ```pip3 install -r requirements.txt```
 3. Install mkvtoolnix ```sudo apt-get install mkvtoolnix```
 4. Download the portable version of SubtitleEdit https://github.com/SubtitleEdit/subtitleedit/releases
@@ -31,11 +31,13 @@ Best used in tandem with https://github.com/iwalton3/media-scripts/tree/master/f
     ```
 8. Read the usage below and enjoy!
 ### Windows
-1. Install mkvtoolnix https://mkvtoolnix.download/downloads.html#windows
+1. Run ``` git clone https://github.com/zachstultz/anime-lang-track-corrector ``` or download above.
+2. Run ```pip3 install -r requirements.txt```
+3. Install mkvtoolnix https://mkvtoolnix.download/downloads.html#windows
     - Add the mkvtoolnix folder location as a PATH in windows.
-2. Install SubtitleEdit https://github.com/SubtitleEdit/subtitleedit/releases
+4. Install SubtitleEdit https://github.com/SubtitleEdit/subtitleedit/releases
     - Add the SubtitleEdit folder location as a PATH in windows.
-3. Read the usage below and enjoy!
+5. Read the usage below and enjoy!
 
 ## Usage
 ```
