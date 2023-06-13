@@ -54,8 +54,6 @@ errors = []
 signs_keywords = ["sign", "music", "song"]
 full_keywords = ["full", "dialog", "dialogue", "english subs"]
 
-track_languages_to_check = ["zxx", "und"]
-
 
 p = argparse.ArgumentParser(
     description="A script that corrects undetermined and not applicable subtitle flags within mkv files for anime."
@@ -537,9 +535,21 @@ def print_similar_releases(comparision_releases):
 
 def check_tracks(tracks, comparision_full_path, original_files_results, root, track):
     send_message("\t\tChecking internal subtitle tracks for a comparision.")
+
+    # The number of pgs subs that can be used for comparision, per file.
+    # Since OCR'ing can take a long time, and end up in an endless loop
+    # of OCR'ing all the PGS subs in a 24 episode season.
+    pgs_limit = 2
+    pgs_count = 0
+
     for comparision_track in tracks:
         if comparision_track._track_type == "subtitles":
             print_track_info(comparision_track)
+            if comparision_track.track_codec == "HDMV PGS":
+                pgs_count += 1
+                if pgs_count > pgs_limit:
+                    print("\n\t\tSkipping PGS, limit reached.")
+                    continue
             extension = set_extension(comparision_track)
             output_file_with_path = extract_output_subtitle_file_and_convert(
                 "lang_comparison" + "." + extension,
@@ -619,9 +629,22 @@ def remove_signs_and_subs(
                     + "] -"
                 )
                 comparision_releases.remove(original_file)
+
+                # limit comparision releases to 3
+                if len(comparision_releases) > 3:
+                    print("\t\tLimiting comparision releases to 3.")
+                    comparision_releases = comparision_releases[:3]
+
+                print("\n")
                 print_similar_releases(comparision_releases)
 
+                # The number of pgs subs that can be used for comparision, per file.
+                # Since OCR'ing can take a long time, and end up in an endless loop
+                # of OCR'ing all the PGS subs in a 24 episode season.
+                pgs_limit = 4
+
                 try:
+                    pgs_count = 0
                     for f in reversed(comparision_releases):
                         print("\n\t\tFile: " + f)
                         comparision_full_path = os.path.join(root, f)
@@ -632,6 +655,11 @@ def remove_signs_and_subs(
                         for comparision_track in tracks:
                             if comparision_track._track_type == "subtitles":
                                 print_track_info(comparision_track)
+                                if comparision_track.track_codec == "HDMV PGS":
+                                    pgs_count += 1
+                                    if pgs_count > pgs_limit:
+                                        print("\n\t\tSkipping PGS, limit reached.")
+                                        continue
                                 extension = set_extension(comparision_track)
                                 output_file_with_path = (
                                     extract_output_subtitle_file_and_convert(
@@ -718,8 +746,8 @@ def remove_signs_and_subs(
 def clean_and_sort(files, root, dirs):
     remove_hidden_files(files, root)
 
-    if len(ignored_folders) != 0:
-        dirs[:] = [d for d in dirs if d not in ignored_folders]
+    if len(ignored_folder_names) != 0:
+        dirs[:] = [d for d in dirs if d not in ignored_folder_names]
 
     dirs.sort()
     files.sort()
@@ -856,6 +884,7 @@ def handle_tracks(tracks, track_counts, root, full_path):
         "Language could not be determined through process of elimination."
     )
 
+
     for track in tracks:
         clean_subtitle_location()  # clean out the subs_test folder
         print_track_info(track)
@@ -957,4 +986,4 @@ if __name__ == "__main__":
     # Print execution time
     execution_time = datetime.now() - startTime
     send_message("\nTotal Execution Time: " + str(execution_time))
-    send_message("[END]-------------------------------------------[END]\n")
+    send_message("[END]-------------------------------------------[END]\n")   
