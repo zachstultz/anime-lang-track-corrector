@@ -9,8 +9,10 @@ Best used in tandem with https://github.com/iwalton3/media-scripts/tree/master/f
 1. Run ``` git clone https://github.com/zachstultz/anime-lang-track-corrector ```
 2. Run ```pip3 install -r requirements.txt```
 3. Install mkvtoolnix ```sudo apt-get install mkvtoolnix```
-4. Download the portable version of Subtitle Edit (and not the installer). https://github.com/SubtitleEdit/subtitleedit/releases
-5. Install the dependencies for Subtitle Edit (http://www.nikse.dk/subtitleedit/help#linux):
+4. Download the portable version of SubtitleEdit https://github.com/SubtitleEdit/subtitleedit/releases
+5. Drop the contents into the se folder:
+![image](https://github.com/zachstultz/anime-lang-track-corrector/assets/8385256/53e4d007-1035-478c-aa12-3d71a53e88dc)
+6. Install the dependencies for SubtitleEdit (http://www.nikse.dk/subtitleedit/help#linux):
     ```
     sudo apt-get install mono-complete
     sudo apt-get install libhunspell-dev
@@ -19,26 +21,19 @@ Best used in tandem with https://github.com/iwalton3/media-scripts/tree/master/f
     sudo apt-get install vlc (already installed on some distros, SE uses (libvlc.so))
     sudo apt-get install ffmpeg (already installed on some distros)
     ```
-6. Install XVFB
+7. Install XVFB
 ```
 sudo apt-get install xvfb
 ```
-7. Install libgtk2
+8. Install libgtk2
 ```
 sudo apt-get install libgtk2.0-0
 ```
-8. Update path_to_subtitle_edit_linux in settings.py.
-![Screen Shot 2021-09-15 at 3 24 02 PM](https://user-images.githubusercontent.com/8385256/133504275-382ebb15-e0de-4e15-8692-af1dc8acf748.png)
-9. Download the fasttext language model. Either the uncompressed(lid.176.bin) or compressed(lid.176.ftz). https://fasttext.cc/docs/en/language-identification.html
-10. Drag and drop the model into the root folder of the script.
-![Screen Shot 2021-09-15 at 3 34 30 PM](https://user-images.githubusercontent.com/8385256/133505641-9b37a2ce-2679-452a-812b-5e3a72a86865.png)
-11. Change the fasttext_model_name file name in settings.py (if you're using uncompressed, it's already set).
-![image](https://github.com/zachstultz/anime-lang-track-corrector/assets/8385256/c4a3262a-c281-40d4-8d47-1ab4019e33ed)
-13. Read the usage below and enjoy!
+8. Read the usage below and enjoy!
 ### Windows
 1. Download and install mkvtoolnix ```https://mkvtoolnix.download/downloads.html#windows```
 2. Add the mkvtoolnix folder location as a PATH in windows.
-3. Download Subtitle Edit, install, and add the folder location as a PATH in windows. https://github.com/SubtitleEdit/subtitleedit/releases
+3. Download SubtitleEdit, install, and add the folder location as a PATH in windows. https://github.com/SubtitleEdit/subtitleedit/releases
 4. Download the fasttext language model. Either the uncompressed(lid.176.bin) or compressed(lid.176.ftz). https://fasttext.cc/docs/en/language-identification.html
 5. Drag and drop the model into the root folder of the script.
 ![Screen Shot 2021-09-15 at 3 34 30 PM](https://user-images.githubusercontent.com/8385256/133505641-9b37a2ce-2679-452a-812b-5e3a72a86865.png)
@@ -80,5 +75,5 @@ python3 anime_lang_track_corrector.py -f "/path/to/individual/file.mkv" -wh "WEB
 1. Rewrite script to use classes.
 2. Massive code cleanup.
 3. Simplify README setup.
-4. Find alternative to Subtitles Edit, and eliminate that dependency.
+4. Find alternative to SubtitleEdit, and eliminate that dependency.
 5. Offer langdetect as an alternative to fasttext.
