@@ -31,15 +31,11 @@ sudo apt-get install libgtk2.0-0
 ```
 8. Read the usage below and enjoy!
 ### Windows
-1. Download and install mkvtoolnix ```https://mkvtoolnix.download/downloads.html#windows```
+1. Install mkvtoolnix https://mkvtoolnix.download/downloads.html#windows
 2. Add the mkvtoolnix folder location as a PATH in windows.
-3. Download SubtitleEdit, install, and add the folder location as a PATH in windows. https://github.com/SubtitleEdit/subtitleedit/releases
-4. Download the fasttext language model. Either the uncompressed(lid.176.bin) or compressed(lid.176.ftz). https://fasttext.cc/docs/en/language-identification.html
-5. Drag and drop the model into the root folder of the script.
-![Screen Shot 2021-09-15 at 3 34 30 PM](https://user-images.githubusercontent.com/8385256/133505641-9b37a2ce-2679-452a-812b-5e3a72a86865.png)
-6. Change the fasttext_model_name file name in settings.py (if you're using uncompressed, it's already set).
-![image](https://github.com/zachstultz/anime-lang-track-corrector/assets/8385256/c4a3262a-c281-40d4-8d47-1ab4019e33ed)
-8. Read the usage below and enjoy!
+3. Install SubtitleEdit https://github.com/SubtitleEdit/subtitleedit/releases
+4. Add the SubtitleEdit folder location as a PATH in windows.
+5. Read the usage below and enjoy!
 
 ## Usage
 ```
