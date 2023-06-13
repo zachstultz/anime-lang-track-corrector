@@ -11,7 +11,7 @@ Best used in tandem with https://github.com/iwalton3/media-scripts/tree/master/f
 3. Install mkvtoolnix ```sudo apt-get install mkvtoolnix```
 4. Download the portable version of SubtitleEdit https://github.com/SubtitleEdit/subtitleedit/releases
 5. Drop the contents into the se folder:
-![image](https://github.com/zachstultz/anime-lang-track-corrector/assets/8385256/53e4d007-1035-478c-aa12-3d71a53e88dc)
+    ![image](https://github.com/zachstultz/anime-lang-track-corrector/assets/8385256/53e4d007-1035-478c-aa12-3d71a53e88dc)
 6. Install the dependencies for SubtitleEdit (http://www.nikse.dk/subtitleedit/help#linux):
     ```
     sudo apt-get install mono-complete
@@ -22,13 +22,13 @@ Best used in tandem with https://github.com/iwalton3/media-scripts/tree/master/f
     sudo apt-get install ffmpeg (already installed on some distros)
     ```
 7. Install XVFB
-```
-sudo apt-get install xvfb
-```
+    ```
+    sudo apt-get install xvfb
+    ```
 8. Install libgtk2
-```
-sudo apt-get install libgtk2.0-0
-```
+    ```
+    sudo apt-get install libgtk2.0-0
+    ```
 8. Read the usage below and enjoy!
 ### Windows
 1. Install mkvtoolnix https://mkvtoolnix.download/downloads.html#windows
