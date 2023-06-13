@@ -32,10 +32,10 @@ Best used in tandem with https://github.com/iwalton3/media-scripts/tree/master/f
 8. Read the usage below and enjoy!
 ### Windows
 1. Install mkvtoolnix https://mkvtoolnix.download/downloads.html#windows
-2. Add the mkvtoolnix folder location as a PATH in windows.
-3. Install SubtitleEdit https://github.com/SubtitleEdit/subtitleedit/releases
-4. Add the SubtitleEdit folder location as a PATH in windows.
-5. Read the usage below and enjoy!
+    - Add the mkvtoolnix folder location as a PATH in windows.
+2. Install SubtitleEdit https://github.com/SubtitleEdit/subtitleedit/releases
+    - Add the SubtitleEdit folder location as a PATH in windows.
+3. Read the usage below and enjoy!
 
 ## Usage
 ```
