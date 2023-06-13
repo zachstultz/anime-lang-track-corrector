@@ -5,7 +5,7 @@ path_to_subtitle_edit_linux = "/PATH/TO/SUBTITLE/EDIT/FOLDER"
 fasttext_model_name = "lid.176.bin"
 
 # Folder names to ignore when recursively scanning a path
-ignored_folder_names = ["Serial Experiments Lain (1998) [tvdb-78814]"]
+ignored_folder_names = []
 
 # The list of track languages that will trigger a detection attempt.
 track_languages_to_check = [
