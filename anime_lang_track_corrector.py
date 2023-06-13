@@ -25,6 +25,40 @@ model = fasttext.load_model(PRETRAINED_MODEL_PATH)
 # Subtitle extraction location
 subtitle_location = os.path.join(ROOT_DIR, "subs_test")
 
+# The linux location for SE
+path_to_subtitle_edit_linux = os.path.join(ROOT_DIR, "se")
+
+# If for some reason the se folder doesn't exist, create it
+if not os.path.isdir(path_to_subtitle_edit_linux):
+    try:
+        os.mkdir(path_to_subtitle_edit_linux)
+        if os.path.isdir(path_to_subtitle_edit_linux):
+            print("\nCreated directory: " + path_to_subtitle_edit_linux)
+        else:
+            print("\nFailed to create directory: " + path_to_subtitle_edit_linux)
+            exit()
+    except OSError as e:
+        print("\nFailed to create directory: " + path_to_subtitle_edit_linux)
+        print("Error: " + str(e))
+        exit()
+
+se_download_link = "https://github.com/SubtitleEdit/subtitleedit/releases"
+
+# if the user's os is linux and there's no files in the se folder, let them know and exit
+if user_os == "Linux":
+    # if the file count isn't bigger than 1, then there's no files in the se folder
+    # bigger than one, because github requries a file for the folder to be created
+    se_file_count = [
+        name
+        for name in os.listdir(path_to_subtitle_edit_linux)
+        if not name.startswith(".")
+    ]
+    if len(se_file_count) <= 1:
+        print(f"\nSubtitleEdit not found!")
+        print(f"Download it at: {se_download_link}")
+        print(f"Place it in: {path_to_subtitle_edit_linux}")
+        exit()
+
 # if subtitle_location does not exist, create it
 if not os.path.isdir(subtitle_location):
     try:
@@ -791,7 +825,7 @@ def search_track_for_language_keyword(path, track, lang_code, root, full_path):
                 + full_language_keyword
                 + " keyword found in track name."
             )
-            print("\t\tCorrect language already set.")
+            print("\n\t\tCorrect language already set.")
         return True
     return False
 
@@ -883,7 +917,6 @@ def handle_tracks(tracks, track_counts, root, full_path):
     failed_elimination_text = (
         "Language could not be determined through process of elimination."
     )
-
 
     for track in tracks:
         clean_subtitle_location()  # clean out the subs_test folder
@@ -986,4 +1019,4 @@ if __name__ == "__main__":
     # Print execution time
     execution_time = datetime.now() - startTime
     send_message("\nTotal Execution Time: " + str(execution_time))
-    send_message("[END]-------------------------------------------[END]\n")   
+    send_message("[END]-------------------------------------------[END]\n")
