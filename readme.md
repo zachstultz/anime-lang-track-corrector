@@ -30,14 +30,6 @@ Best used in tandem with https://github.com/iwalton3/media-scripts/tree/master/f
     sudo apt-get install libgtk2.0-0
     ```
 8. Read the usage below and enjoy!
-### Windows
-1. Run ``` git clone https://github.com/zachstultz/anime-lang-track-corrector ``` or download above.
-2. Install requirements ```pip3 install -r requirements.txt```
-3. Install mkvtoolnix https://mkvtoolnix.download/downloads.html#windows
-    - Add the mkvtoolnix folder location as a PATH in windows.
-4. Install SubtitleEdit https://github.com/SubtitleEdit/subtitleedit/releases
-    - Add the SubtitleEdit folder location as a PATH in windows.
-5. Read the usage below and enjoy!
 
 ## Usage
 ```
