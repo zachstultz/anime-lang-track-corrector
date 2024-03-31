@@ -4,8 +4,34 @@ It goes through each mkv file, track-by-track and checks for any undetermined or
 
 Best used in tandem with https://github.com/iwalton3/media-scripts/tree/master/force-signs in my opinion. Use my script to correct any unmarked languages, and his to force the signs.
 
-## Setup Instructions
-### Linux (Ubuntu/Debian)
+## Docker (Reccomended)
+### File Example:
+```
+  docker run -d \
+    --name anime_lang_track_corrector \
+    -e WEBHOOK="https://discord.com/api/webhooks/your-webhook-id/your-webhook-token" \
+    -e LANG_MATCH_PERCENTAGE="70" \
+    -e FILE="/path/to/anime/video/file.mkv" \
+    -v "/path/to/override/settings.py:/app/settings.py:ro" `#optional` \
+    -v "/path/to/anime/video/file.mkv:/path/to/anime/video/file.mkv"\
+    -v "/path/to/SubtitleEdit/folder":/app/se \
+    zachstultz/anime_lang_track_corrector:master
+```
+
+### Path Example:
+```
+  docker run -d \
+    --name anime_lang_track_corrector \
+    -e WEBHOOK="https://discord.com/api/webhooks/your-webhook-id/your-webhook-token" \
+    -e LANG_MATCH_PERCENTAGE="70" \
+    -e PATH_TO_DIR="/anime_folder" \
+    -v "/path/to/override/settings.py:/app/settings.py:ro" `#optional` \
+    -v "/path/to/anime/folder:/anime_folder" \
+    -v "/path/to/SubtitleEdit/folder":/app/se \
+    zachstultz/anime_lang_track_corrector:master
+```
+
+## Linux Install (Ubuntu/Debian)
 1. Run ``` git clone https://github.com/zachstultz/anime-lang-track-corrector ``` or download above.
 2. Install requirements ```pip3 install -r requirements.txt```
 3. Install mkvtoolnix ```sudo apt-get install mkvtoolnix```
