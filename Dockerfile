@@ -14,7 +14,7 @@ RUN apt-get update
 RUN groupmod -o -g "$PGID" appuser && usermod -o -u "$PUID" appuser
 
 # Allow users to specify UMASK (default value is 022)
-ENV UMASK 022
+ENV UMASK=022
 RUN umask "$UMASK"
 
 # Copy the current directory contents into the container at /app
