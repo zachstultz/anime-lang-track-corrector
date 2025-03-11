@@ -5,6 +5,7 @@ It goes through each mkv file, track-by-track and checks for any undetermined or
 Best used in tandem with https://github.com/iwalton3/media-scripts/tree/master/force-signs in my opinion. Use my script to correct any unmarked languages, and his to force the signs.
 
 ## Docker (Reccomended)
+1. Download the portable version of SubtitleEdit https://github.com/SubtitleEdit/subtitleedit/releases and specify the path below.
 ### File Example:
 ```
   docker run -d \
