@@ -1,77 +1,90 @@
 import argparse
 import os
-import platform
 import re
 import subprocess
+import sys
 from datetime import datetime
 
 import fasttext
 import pymkv
 from chardet.universaldetector import UniversalDetector
 from discord_webhook import DiscordWebhook
-from langcodes import *
+from langcodes import Language, standardize_tag
 from pysubparser import parser
 
 from settings import *
 
-# Determine the user's operating system
-user_os = platform.system()
+# Version of the script
+script_version = (1, 0, 1)
+script_version_text = "v{}.{}.{}".format(*script_version)
+
+# Script Execution Location
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # FastText Model Location
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 PRETRAINED_MODEL_PATH = os.path.join(ROOT_DIR, fasttext_model_name)
 model = fasttext.load_model(PRETRAINED_MODEL_PATH)
 
 # Subtitle extraction location
-subtitle_location = os.path.join(ROOT_DIR, "subs_test")
+subtitle_location = os.path.join("/tmp", "subs_test")
 
-# The linux location for SE
-path_to_subtitle_edit_linux = os.path.join(ROOT_DIR, "se")
+# The location for SE
+se_path = os.path.join(ROOT_DIR, "se")
 
-# If for some reason the se folder doesn't exist, create it
-if not os.path.isdir(path_to_subtitle_edit_linux):
-    try:
-        os.mkdir(path_to_subtitle_edit_linux)
-        if os.path.isdir(path_to_subtitle_edit_linux):
-            print("\nCreated directory: " + path_to_subtitle_edit_linux)
-        else:
-            print("\nFailed to create directory: " + path_to_subtitle_edit_linux)
+# The path to the anime folder to be scanned recursively.
+path = None
+
+# The individual video file to be processed.
+file = None
+
+# The optional discord webhook url to be pinged about changes and errors.
+discord_webhook_url = ""
+
+# Whether or not the script is running in a docker container
+in_docker = False
+
+if ROOT_DIR == "/app":
+    in_docker = True
+
+if not in_docker:
+    # create the se folder if it doesn't exist
+    if not os.path.isdir(se_path):
+        try:
+            os.mkdir(se_path)
+            if os.path.isdir(se_path):
+                print(f"\nCreated directory: {se_path}")
+            else:
+                print(f"\nFailed to create directory: {se_path}")
+                exit()
+        except OSError as e:
+            print(f"\nFailed to create directory: {se_path}")
+            print(f"Error: {e}")
             exit()
-    except OSError as e:
-        print("\nFailed to create directory: " + path_to_subtitle_edit_linux)
-        print("Error: " + str(e))
-        exit()
 
-se_download_link = "https://github.com/SubtitleEdit/subtitleedit/releases"
+    se_download_link = "https://github.com/SubtitleEdit/subtitleedit/releases"
 
-# if the user's os is linux and there's no files in the se folder, let them know and exit
-if user_os == "Linux":
     # if the file count isn't bigger than 1, then there's no files in the se folder
     # bigger than one, because github requries a file for the folder to be created
-    se_file_count = [
-        name
-        for name in os.listdir(path_to_subtitle_edit_linux)
-        if not name.startswith(".")
-    ]
+    se_file_count = [name for name in os.listdir(se_path) if not name.startswith(".")]
     if len(se_file_count) <= 1:
         print(f"\nSubtitleEdit not found!")
         print(f"Download it at: {se_download_link}")
-        print(f"Place it in: {path_to_subtitle_edit_linux}")
+        print(f"Place the contents in: {se_path}")
         exit()
 
-# if subtitle_location does not exist, create it
-if not os.path.isdir(subtitle_location):
-    try:
-        os.mkdir(subtitle_location)
-        if os.path.isdir(subtitle_location):
-            print("\nCreated directory: " + subtitle_location)
-        else:
-            print("\nFailed to create directory: " + subtitle_location)
+    # if subtitle_location does not exist, create it
+    if not os.path.isdir(subtitle_location):
+        try:
+            os.mkdir(subtitle_location)
+            if os.path.isdir(subtitle_location):
+                print(f"\nCreated directory: {subtitle_location}")
+            else:
+                print(f"\nFailed to create directory: {subtitle_location}")
+                exit()
+        except OSError as e:
+            print(f"\nFailed to create directory: {subtitle_location}")
+            print(f"Error: {e}")
             exit()
-    except OSError as e:
-        print("\nFailed to create directory: " + subtitle_location)
-        print("Error: " + str(e))
-        exit()
 
 # The required percentage that must be met when detecting an individual language with FastText
 required_lang_match_percentage = 70
@@ -85,10 +98,9 @@ errors = []
 
 
 # Signs & Full keyword arrays, add any keywords you want to be searched for
-signs_keywords = ["sign", "music", "song"]
-full_keywords = ["full", "dialog", "dialogue", "english subs"]
+signs_keywords = ["sign", "music", "song", "s&s"]
 
-
+print("Run Settings:")
 p = argparse.ArgumentParser(
     description="A script that corrects undetermined and not applicable subtitle flags within mkv files for anime."
 )
@@ -113,45 +125,73 @@ p.add_argument(
     help="The percentage of the detected file language required for the language to be set.",
     required=False,
 )
-args = p.parse_args()
+p.add_argument(
+    "-se",
+    "--se_path",
+    help="The path to the SubtitleEdit folder.",
+    required=False,
+)
+
 # parse the arguments
-if args.path:
+args = p.parse_args()
+
+if args.path is None and args.file is None:
+    print("\tNo path or file specified.")
+    exit()
+
+if args.path and args.file:
+    print("\tBoth path and file specified, please only specify one.")
+    exit()
+elif args.path:
     path = args.path
-else:
-    args.path = None
-if args.file:
+elif args.file:
     file = args.file
-    path = os.path.dirname(file)
-else:
-    args.file = None
+
+print(f"\tPath: {path}")
+print(f"\tFile: {file}")
+
 if args.webhook:
     discord_webhook_url = args.webhook
-else:
-    discord_webhook_url = ""
+print(f"\tWebhook: {discord_webhook_url}")
+
 if args.lang_match_percentage:
-    required_lang_match_percentage = int(args.lang_match_percentage)
+    try:
+        required_lang_match_percentage = int(args.lang_match_percentage)
+    except ValueError:
+        print("Invalid language match percentage.")
+        exit()
+
+print(f"\tLanguage Match Percentage: {required_lang_match_percentage}%")
+
+if args.se_path:
+    if os.path.isdir(args.se_path):
+        se_path = args.se_path
+    else:
+        print(f"Invalid path to SubtitleEdit folder: {args.se_path}")
+        exit()
+print(f"\tSubtitleEdit Path: {se_path}")
 
 
-# Removes the file if it exists, used for cleaning up after FastText detection
+# Removes the file if it exists (used for cleaning up after FastText detection)
 def remove_file(file, silent=False):
     if os.path.isfile(file):
         try:
             os.remove(file)
             if not os.path.isfile(file):
                 if not silent:
-                    print("\n\t\tFile removed:", file)
+                    print(f"\n\t\tFile removed: {file}")
             else:
-                send_error_message("\t\tFailed to remove file:", file)
+                send_message(f"\t\tFailed to remove file: {file}", error=True)
         except OSError as e:
-            send_error_message(
-                "\t\tFailed to remove file:", file, "\n\t\tError:", str(e)
+            send_message(
+                f"\t\tFailed to remove file: {file}\n\t\tError: {e}", error=True
             )
     else:
-        print("\t\tFile does not exist before attempting to remove: " + file)
+        print(f"\t\tFile does not exist before attempting to remove: {file}")
 
 
 # Detects the encoding of the supplied subtitle file
-def detect_subtitle_encoding(output_file_with_path):
+def detect_sub_encoding(output_file_with_path):
     try:
         with open(output_file_with_path, "rb") as file:
             detector = UniversalDetector()
@@ -162,36 +202,33 @@ def detect_subtitle_encoding(output_file_with_path):
             detector.close()
             encoding = detector.result["encoding"]
     except FileNotFoundError:
-        send_error_message("File not found: " + output_file_with_path)
-        print("Defaulting to UTF-8")
+        send_message(
+            f"File not found: {output_file_with_path}, defaulting to UTF-8", error=True
+        )
         encoding = "UTF-8"
     return encoding
 
 
-# Appends, sends, and prints our error message
-def send_error_message(message):
-    errors.append(message)
-    send_discord_message(message)
-    print(message)
-
-
 # Appends, sends, and prints our change message
-def send_message(message, add_to_changed=False):
+def send_message(message, add_to_changed=False, error=False):
     if message:
         if add_to_changed:
             items_changed.append(message)
+        if error:
+            errors.append(message)
         send_discord_message(message)
         print(message)
 
 
 # Sends a discord message
 def send_discord_message(message):
-    message = str(message)
-    if discord_webhook_url:
-        webhook = DiscordWebhook(
-            url=discord_webhook_url, content=message, rate_limit_retry=True
-        )
-        webhook.execute()
+    if not discord_webhook_url:
+        return
+
+    webhook = DiscordWebhook(
+        url=discord_webhook_url, content=f"{message}", rate_limit_retry=True
+    )
+    webhook.execute()
 
 
 # Prints the information about the given track
@@ -208,16 +245,14 @@ def print_track_info(track):
 
 # Determines and sets the file extension
 def set_extension(track):
-    if track.track_codec in ["SubStationAlpha", "AdvancedSubStationAlpha"]:
-        return "ass"
-    elif track.track_codec == "SubRip/SRT":
-        return "srt"
-    elif track.track_codec == "HDMV PGS":
-        return "pgs"
-    elif track.track_codec == "VobSub":
-        return "sub"
-    else:
-        return ""
+    codec_map = {
+        "SubStationAlpha": "ass",
+        "AdvancedSubStationAlpha": "ass",
+        "SubRip/SRT": "srt",
+        "HDMV PGS": "pgs",
+        "VobSub": "sub",
+    }
+    return codec_map.get(track.track_codec, "")
 
 
 # Removes hidden files from list, useful for MacOS
@@ -227,7 +262,7 @@ def remove_hidden_files(files, root):
             files.remove(file)
 
 
-# execute command with subprocess and reutrn the output
+# execute command with subprocess and return the output
 def execute_command(command):
     process = None
     try:
@@ -240,86 +275,77 @@ def execute_command(command):
                 sys.stdout.buffer.write(output)
                 sys.stdout.flush()
     except Exception as e:
-        send_error_message(str(e))
+        send_message(
+            f"Error occurred while executing command: {command} \n{e}", error=True
+        )
     return process
 
 
-def extract_output_subtitle_file_and_convert(file_name, track, full_path, root):
+# Processes the subtitle file by extracting and converting it
+def process_subtitle_file(file_name, track, full_path, root):
     outputted_file = os.path.join(root, file_name)
     call = execute_command(
         [
             "mkvextract",
             "tracks",
             full_path,
-            str(track.track_id) + ":" + outputted_file,
+            f"{track.track_id}:{outputted_file}",
         ]
     )
 
     if os.path.isfile(outputted_file) and call.returncode == 0:
         print("\t\tExtraction successful.")
         print("\t\tConverting subtitle for detection.")
-        converted = convert_subtitle_file(outputted_file, os.path.basename(full_path))
 
-        if converted is not None and os.path.isfile(converted):
+        basename = os.path.basename(full_path)
+        converted = convert_subtitle_file(outputted_file, basename)
+
+        if os.path.isfile(converted):
             return converted
         else:
             print("\t\tConversion failed.")
     else:
-        send_error_message("Extraction failed: " + outputted_file + "\n")
+        send_message(
+            f"Extraction failed: {outputted_file}\nwith {basename}", error=True
+        )
 
 
+# Sets the track language using mkvpropedit
 def set_track_language(path, track, language_code):
+    track_number = track.track_id + 1
+
     try:
         execute_command(
             [
                 "mkvpropedit",
                 path,
                 "--edit",
-                "track:" + str(track.track_id + 1),
+                f"track:{track_number}",
                 "--set",
-                "language=" + language_code,
+                f"language={language_code}",
             ]
         )
         send_message(
-            f"\t\tFile: {path}\n\t\tTrack: {track.track_id + 1} set to: {language_code}",
+            f"\t\tFile: {path}\n\t\tTrack: {track_number} set to: {language_code}",
             True,
         )
     except Exception as e:
-        send_error_message(f"{e} File: {path}")
+        send_message(f"{e} File: {path}", error=True)
 
 
-def check_and_set_result_two(
-    match_result, full_path, track, lang_code, output_file_with_path, root, tracks
-):
-    file = os.path.basename(full_path)
-    match_result_percent = f"{match_result}%"
-    if match_result >= required_lang_match_percentage:
-        full_language_keyword = Language.make(
-            language=standardize_tag(lang_code)
-        ).display_name()
-        send_message(f"\n\t\tFile: {file}\n\t\tMatch: {match_result_percent}")
-        print(f"\t\tSubtitle file detected as {full_language_keyword}")
-        set_track_language(full_path, track, lang_code)
-        return 1
-    else:
-        send_error_message(
-            f"\n\t\tFile: {file}\n\t\tMatch: {match_result_percent}\n\t\tSubtitle match below {required_lang_match_percentage}%, no match found.\n"
-        )
-        return 0
-
-
+# Checks the match result and sets the track language if above threshold
 def check_and_set_result(
     match_result,
     full_path,
     track,
     lang_code,
-    output_file_with_path,
     original_subtitle_array,
     root,
     tracks,
 ):
     file = os.path.basename(full_path)
     match_result_percent = f"{match_result}%"
+
     if match_result >= required_lang_match_percentage:
         send_message(f"\n\t\tFile: {file}\n\t\tMatch: {match_result_percent}")
         print(f"\t\tSubtitle file detected as {lang_code}")
@@ -329,21 +355,49 @@ def check_and_set_result(
             f"\n\t\tFile: {file}\n\t\tMatch: {match_result_percent}\n\t\t"
             f"Subtitle match below {required_lang_match_percentage}%, no match found.\n"
         )
-        send_error_message(error_message)
+        send_message(error_message, error=True)
         if match_result >= 10:
             remove_signs_and_subs(
-                files, file, original_subtitle_array, tracks, root, track, file
+                files,
+                file,
+                original_subtitle_array,
+                tracks,
+                root,
+                track,
+                file,
+                full_path,
             )
+
+
+# Checks the match result and sets the track language if above threshold
+def check_and_set_result_two(match_result, full_path, track, lang_code):
+    file = os.path.basename(full_path)
+    match_result_percent = f"{match_result}%"
+
+    if match_result >= required_lang_match_percentage:
+        full_language_keyword = Language.make(
+            language=standardize_tag(lang_code)
+        ).display_name()
+        send_message(f"\n\t\tFile: {file}\n\t\tMatch: {match_result_percent}")
+        print(f"\t\tSubtitle file detected as {full_language_keyword}")
+        set_track_language(full_path, track, lang_code)
+        return 1
+    else:
+        send_message(
+            f"\n\t\tFile: {file}\n\t\tMatch: {match_result_percent}\n\t\tSubtitle match below {required_lang_match_percentage}%, no match found.\n",
+            error=True,
+        )
+        return 0
 
 
 lang_codes = [
     "eng",
+    "jpn",
     "spa",
     "por",
     "fra",
     "deu",
     "ita",
-    "jpn",
     "kor",
     "pol",
     "rus",
@@ -370,40 +424,31 @@ lang_codes = [
 ]
 
 
-def detect_subs_via_fasttext(track, extension, root, full_path, tracks):
+# Performs FastText language detection on the set of tracks/subtitles
+def fast_text_detect(track, extension, root, full_path, tracks):
     lang_keyword_search = ""
-    lang_keyword_search_short = ""
 
     if track.track_name:
         for code in lang_codes:
-            lang_keyword_search = search_track_for_language_keyword(
-                path, track, code, root, full_path
-            )
+            lang_keyword_search = contains_language_keyword(
+                track, code, full_path
+            ) or contains_language_keyword(track, code[:-1], full_path)
+
             if lang_keyword_search:
                 break
 
-        if not lang_keyword_search:
-            for code in lang_codes:
-                lang_keyword_search_short = search_track_for_language_keyword(
-                    path, track, code[:-1], root, full_path
-                )
-                if lang_keyword_search_short:
-                    break
-
-    if not lang_keyword_search and not lang_keyword_search_short:
+    if not lang_keyword_search:
         print("\n\t\tNo language keyword found in track name.")
         print("\t\tFile will be extracted and detection will be attempted.")
-        print("\t\tExtracting test file to " + subtitle_location)
+        print(f"\t\tExtracting test file to {subtitle_location}")
 
         try:
-            output_file_with_path = extract_output_subtitle_file_and_convert(
-                "lang_test." + extension, track, full_path, subtitle_location
+            output_file_with_path = process_subtitle_file(
+                f"lang_test.{extension}", track, full_path, subtitle_location
             )
 
             if output_file_with_path:
-                subtitle_lines_array = parse_subtitle_lines_into_array(
-                    output_file_with_path
-                )
+                subtitle_lines_array = parse_subtitles(output_file_with_path)
                 match_result = evaluate_subtitle_lines(subtitle_lines_array)
 
                 if len(match_result) >= 2 and match_result[1] != 0:
@@ -415,7 +460,6 @@ def detect_subs_via_fasttext(track, extension, root, full_path, tracks):
                             full_path,
                             track,
                             match_result[0],
-                            output_file_with_path,
                             subtitle_lines_array,
                             root,
                             tracks,
@@ -424,13 +468,17 @@ def detect_subs_via_fasttext(track, extension, root, full_path, tracks):
                         print("\t\tCorrect language already set.")
 
         except Exception as e:
-            send_error_message(str(e))
+            send_message(
+                f"Error occurred while processing track {track.track_id}: {e}",
+                error=True,
+            )
             return
     else:
         return True
 
 
-def clean_subtitle_lines(lines):
+# Cleans the subtitle lines for better language detection
+def clean_subtitles(lines):
     cleaned_lines = []
 
     if lines:
@@ -444,7 +492,7 @@ def clean_subtitle_lines(lines):
 
             clean_one = re.sub(r"(^[a-z$&+,:;=?@#|'<>.^*()%!-]*;)", "", text)
             clean_two = re.sub(r"[0-9$&+,:;=?@#|'<>.^*()%!-]", " ", clean_one)
-            clean_three = re.sub("(\s{2,})", " ", clean_two).strip()  # Excess space
+            clean_three = re.sub(r"(\s{2,})", " ", clean_two).strip()  # Excess space
 
             if re.search(r"^(\w\s){3,}", clean_three):  # EX: 'D b b l l b''
                 continue
@@ -455,8 +503,9 @@ def clean_subtitle_lines(lines):
     return cleaned_lines
 
 
+# Evaluates the subtitle lines using a language detection model
 def evaluate_subtitle_lines(subtitles):
-    cleaned_subtitles = clean_subtitle_lines(subtitles)
+    cleaned_subtitles = clean_subtitles(subtitles)
     results = []
 
     if not cleaned_subtitles:
@@ -469,12 +518,13 @@ def evaluate_subtitle_lines(subtitles):
             print(f'\t\tLanguage Detected: {result} on "{subtitle}"\t')
             results.append(result)
         except Exception as e:
-            send_error_message(
-                "Error determining result of subtitle:",
-                str(subtitle),
-                "\n\t\tError:",
-                str(e),
+            send_message(
+                f"Failed to determine result for subtitle:\n\tSubtitle: {subtitle}\n\tError: {e}",
+                error=True,
             )
+
+    if not results:
+        return "", 0
 
     language_counts = {result: results.count(result) for result in results}
     highest_lang_result = max(language_counts, key=language_counts.get)
@@ -485,16 +535,19 @@ def evaluate_subtitle_lines(subtitles):
     return highest_lang_result, highest_lang_result_percent
 
 
-def parse_subtitle_lines_into_array(input_file):
+# Parses the subtitles from the given input file
+# and returns them as a list.
+def parse_subtitles(input_file):
     extension = os.path.splitext(input_file)[1].strip(".")
     subtitles = parser.parse(
         input_file,
         subtitle_type=extension,
-        encoding=detect_subtitle_encoding(input_file),
+        encoding=detect_sub_encoding(input_file),
     )
     return list(subtitles)
 
 
+# Converts the subtitle file to SRT format using SubtitleEdit
 def convert_subtitle_file(subtitle_file, source_file):
     if subtitle_file.endswith(".srt"):
         return subtitle_file
@@ -506,68 +559,62 @@ def convert_subtitle_file(subtitle_file, source_file):
         "/overwrite",
     ]
 
-    if user_os == "Windows":
-        call = [
-            "SubtitleEdit",
-            "/convert",
-            "\\\\?\\{}".format(subtitle_file),
-        ]
-        call.extend(processing_options)
-        # call = 'SubtitleEdit /convert "\\\\?\\{}" srt /RemoveFormatting /MergeSameTexts /overwrite'.format(
-        #     subtitle_file
-        # )
-    elif user_os == "Linux":
-        call = [
-            "xvfb-run",
-            "-a",
-            "mono",
-            os.path.join(path_to_subtitle_edit_linux, "SubtitleEdit.exe"),
-            "/convert",
-            subtitle_file,
-        ]
-        call.extend(processing_options)
+    call = [
+        "xvfb-run",
+        "-a",
+        "mono",
+        os.path.join(se_path, "SubtitleEdit.exe"),
+        "/convert",
+        subtitle_file,
+    ]
+    call.extend(processing_options)
 
     try:
         result = execute_command(call)
-        converted_file = os.path.splitext(subtitle_file)[0] + ".srt"
+        converted_file = f"{os.path.splitext(subtitle_file)[0]}.srt"
 
         if os.path.isfile(converted_file) and result.returncode == 0:
             print("\t\tConversion successful.")
             return converted_file
         else:
-            send_error_message(
-                f"Conversion failed on: {subtitle_file} from {source_file}"
+            send_message(
+                f"Conversion failed on: {subtitle_file} from {source_file}", error=True
             )
     except Exception as e:
-        print("Subprocess error:", e)
+        send_message(f"Subprocess error: {e}", error=True)
 
 
+# Filters files by release group using regex
 def find_files_by_release_group(release_group, files):
     return [
         file for file in files if re.search(release_group, file, flags=re.IGNORECASE)
     ]
 
 
+# Gets the MKV tracks from the specified file
 def get_mkv_tracks(full_path):
     mkv = pymkv.MKVFile(full_path)
     tracks = mkv.get_track()
     return tracks
 
 
+# Removes all non-subtitle tracks from the list
 def remove_all_tracks_but_subtitles(tracks):
     clean = [track for track in tracks if track._track_type == "subtitles"]
     return clean
 
 
+# Prints similar releases found for comparision
 def print_similar_releases(comparision_releases):
     if comparision_releases:
         for release in comparision_releases:
-            print("\t\t" + release)
+            print(f"\t\t{release}")
     else:
         print("\t\tNo comparision releases found.")
 
 
-def check_tracks(tracks, comparision_full_path, original_files_results, root, track):
+# Checks the internal subtitle tracks for comparision
+def check_tracks(tracks, comparision_full_path, original_files_results, track):
     send_message("\t\tChecking internal subtitle tracks for a comparision.")
 
     # The number of pgs subs that can be used for comparision, per file.
@@ -584,18 +631,19 @@ def check_tracks(tracks, comparision_full_path, original_files_results, root, tr
                 if pgs_count > pgs_limit:
                     print("\n\t\tSkipping PGS, limit reached.")
                     continue
+
             extension = set_extension(comparision_track)
-            output_file_with_path = extract_output_subtitle_file_and_convert(
-                "lang_comparison" + "." + extension,
+            output_file_with_path = process_subtitle_file(
+                f"lang_comparison.{extension}",
                 comparision_track,
                 comparision_full_path,
                 subtitle_location,
             )
             if output_file_with_path is not None:
-                comparision_subtitle_lines_array = parse_subtitle_lines_into_array(
+                comparision_subtitle_lines_array = parse_subtitles(
                     output_file_with_path
                 )
-                comparision_subtitle_lines_array = clean_subtitle_lines(
+                comparision_subtitle_lines_array = clean_subtitles(
                     comparision_subtitle_lines_array
                 )
                 duplicates_removed = 0
@@ -603,7 +651,7 @@ def check_tracks(tracks, comparision_full_path, original_files_results, root, tr
                 for result in comparision_subtitle_lines_array[:]:
                     if result in original_files_results:
                         original_files_results.remove(result)
-                        print("\t\tDuplicate removed from original: " + result)
+                        print(f"\t\tDuplicate removed from original: {result}")
                         removed.append(result)
                         duplicates_removed += 1
                 if duplicates_removed > 1:
@@ -622,9 +670,6 @@ def check_tracks(tracks, comparision_full_path, original_files_results, root, tr
                                 comparision_full_path,
                                 track,
                                 match_result[0],
-                                output_file_with_path,
-                                root,
-                                tracks,
                             )
                             print("\t\t-- Comparision Attempt --")
                             if set_result == 1:
@@ -636,14 +681,15 @@ def check_tracks(tracks, comparision_full_path, original_files_results, root, tr
     return False
 
 
+# Removes unwanted characters and subtitles from the original files
 def remove_signs_and_subs(
-    files, original_file, original_files_results, tracks, root, track, file
+    files, original_file, original_files_results, tracks, root, track, file, full_path
 ):
-    original_files_results = clean_subtitle_lines(original_files_results)
+    original_files_results = clean_subtitles(original_files_results)
     tracks.remove(track)
 
     if not check_tracks(
-        tracks, os.path.join(root, file), original_files_results, root, track
+        tracks, os.path.join(root, file), original_files_results, track
     ):
         original_file_releaser = re.search(r"-(?:.(?!-))+$", original_file)
         original_file_releaser = re.sub(
@@ -658,9 +704,7 @@ def remove_signs_and_subs(
 
             if comparision_releases:
                 send_discord_message(
-                    "\n\t\t- Checking Similar Releases to ["
-                    + original_file_releaser
-                    + "] -"
+                    f"\n\t\t- Checking Similar Releases to [{original_file_releaser}] -"
                 )
                 comparision_releases.remove(original_file)
 
@@ -680,40 +724,37 @@ def remove_signs_and_subs(
                 try:
                     pgs_count = 0
                     for f in reversed(comparision_releases):
-                        print("\n\t\tFile: " + f)
+                        print(f"\n\t\tFile: {f}")
                         comparision_full_path = os.path.join(root, f)
                         tracks = get_mkv_tracks(comparision_full_path)
                         tracks = remove_all_tracks_but_subtitles(tracks)
-                        print("\n\t\t--- Tracks [" + str(len(tracks)) + "] ---")
+
+                        print(f"\n\t\t--- Tracks [{len(tracks)}] ---")
 
                         for comparision_track in tracks:
                             if comparision_track._track_type == "subtitles":
                                 print_track_info(comparision_track)
+
                                 if comparision_track.track_codec == "HDMV PGS":
                                     pgs_count += 1
                                     if pgs_count > pgs_limit:
                                         print("\n\t\tSkipping PGS, limit reached.")
                                         continue
+
                                 extension = set_extension(comparision_track)
-                                output_file_with_path = (
-                                    extract_output_subtitle_file_and_convert(
-                                        "lang_comparison" + "." + extension,
-                                        comparision_track,
-                                        comparision_full_path,
-                                        subtitle_location,
-                                    )
+                                output_file_with_path = process_subtitle_file(
+                                    f"lang_comparison.{extension}",
+                                    comparision_track,
+                                    comparision_full_path,
+                                    subtitle_location,
                                 )
 
                                 if output_file_with_path:
-                                    comparision_subtitle_lines_array = (
-                                        parse_subtitle_lines_into_array(
-                                            output_file_with_path
-                                        )
+                                    comparision_subtitle_lines_array = parse_subtitles(
+                                        output_file_with_path
                                     )
-                                    comparision_subtitle_lines_array = (
-                                        clean_subtitle_lines(
-                                            comparision_subtitle_lines_array
-                                        )
+                                    comparision_subtitle_lines_array = clean_subtitles(
+                                        comparision_subtitle_lines_array
                                     )
                                     duplicates_removed = 0
                                     removed = []
@@ -722,8 +763,7 @@ def remove_signs_and_subs(
                                         if result in original_files_results:
                                             original_files_results.remove(result)
                                             print(
-                                                "\t\tDuplicate removed from original: "
-                                                + result
+                                                f"\t\tDuplicate removed from original: {result}"
                                             )
                                             removed.append(result)
                                             duplicates_removed += 1
@@ -753,9 +793,6 @@ def remove_signs_and_subs(
                                                     full_path,
                                                     track,
                                                     match_result[0],
-                                                    output_file_with_path,
-                                                    root,
-                                                    tracks,
                                                 )
                                                 print("\t\t-- Comparison Attempt --")
 
@@ -767,16 +804,15 @@ def remove_signs_and_subs(
                                         )
 
                 except Exception as e:
-                    send_error_message(str(e))
+                    send_message(str(e), error=True)
                     return
             else:
-                send_message(
-                    "\t\tNo similar release found for: " + file + " at " + root
-                )
+                send_message(f"\t\tNo similar release found for: {file} at {root}")
     else:
         send_message("\t\tSuccessfully set through internal subs")
 
 
+# Cleans and sorts the files and directories
 def clean_and_sort(files, root, dirs):
     remove_hidden_files(files, root)
 
@@ -793,7 +829,8 @@ def clean_and_sort(files, root, dirs):
             files.remove(file)
 
 
-def search_track_for_language_keyword(path, track, lang_code, root, full_path):
+# Checks if the track name contains a language keyword
+def contains_language_keyword(track, lang_code, full_path):
     if not track.track_name:
         return False
 
@@ -810,20 +847,12 @@ def search_track_for_language_keyword(path, track, lang_code, root, full_path):
     ) or re.search(rf"\b{lang_code}\b", track_name, re.IGNORECASE):
         if standardize_tag(track.language) != standardize_tag(lang_code):
             send_message(
-                "\t\tFile: "
-                + full_path
-                + "\n\t\t\t"
-                + full_language_keyword
-                + " keyword found in track name."
+                f"\t\tFile: {full_path}\n\t\t\t{full_language_keyword} keyword found in track name."
             )
             set_track_language(full_path, track, lang_code)
         else:
             print(
-                "\t\tFile: "
-                + full_path
-                + "\n\t\t\t"
-                + full_language_keyword
-                + " keyword found in track name."
+                f"\t\tFile: {full_path}\n\t\t\t{full_language_keyword} keyword found in track name."
             )
             print("\n\t\tCorrect language already set.")
         return True
@@ -834,23 +863,31 @@ def search_track_for_language_keyword(path, track, lang_code, root, full_path):
 if discord_webhook_url != "":
     send_message("")
     send_message("\n[START]-------------------------------------------[START]")
-    send_message("Start Time: " + str(datetime.now()))
+    send_message(f"Start Time: {datetime.now()}")
     send_message("Script: anime_lang_track_corrector.py")
-    send_message("Path: " + path)
+    if path:
+        send_message(f"Path: {path}")
+    elif file:
+        send_message(f"File: {file}")
+    else:
+        exit()
 
 
-def check_for_sign_keywords(track_name, track):
+# Checks if any sign keywords are in the track name
+def contains_sign_keyword(track_name):
     for sign in signs_keywords:
-        if re.search(sign, track_name, re.IGNORECASE):
+        if sign.lower() in track_name.lower():
             return True
     return False
 
 
+# The main start function that processes files
 def start(files, root, dirs):
     clean_subtitle_location()  # clean out the subs_test folder
     for file in files:
         full_path = os.path.join(root, file)
         file_without_extension = os.path.splitext(full_path)[0]
+
         if os.path.isfile(full_path):
             print(f"\n\tPath: {root}")
             print(f"\tFile: {file}")
@@ -861,10 +898,11 @@ def start(files, root, dirs):
                     print(f"\n\t\t--- Tracks [{len(tracks)}] ---")
                     handle_tracks(tracks, track_counts, root, full_path)
             except Exception as e:
-                send_error_message(f"\tError with file: {file} ERROR: {str(e)}")
+                send_message(f"\tError with file: {file} ERROR: {e}", error=True)
         else:
-            send_error_message(
-                f"\n\tNot a valid file (do you have mkvtoolnix installed?): {full_path}\n"
+            send_message(
+                f"\n\tNot a valid file (do you have mkvtoolnix installed?): {full_path}\n",
+                error=True,
             )
     clean_subtitle_location()  # clean out the subs_test folder
 
@@ -879,20 +917,24 @@ def count_tracks(tracks):
         "unknown_subtitle": 0,
     }
     for track in tracks:
+        lang = track.language.lower()
+
+        # Normalize track type to a suffix used in track_counts keys
         if track._track_type == "audio":
-            if track.language in ["jpn", "jp"]:
-                track_counts["jpn_audio"] += 1
-            elif track.language in ["eng", "en"]:
-                track_counts["eng_audio"] += 1
-            else:
-                track_counts["unknown_audio"] += 1
+            suffix = "audio"
         elif track._track_type == "subtitles":
-            if track.language in ["jpn", "jp"]:
-                track_counts["jpn_subtitle"] += 1
-            elif track.language in ["eng", "en"]:
-                track_counts["eng_subtitle"] += 1
+            suffix = "subtitle"
+        else:
+            suffix = None
+
+        if suffix:
+            if lang in ("jpn", "jp"):
+                track_counts[f"jpn_{suffix}"] += 1
+            elif lang in ("eng", "en"):
+                track_counts[f"eng_{suffix}"] += 1
             else:
-                track_counts["unknown_subtitle"] += 1
+                track_counts[f"unknown_{suffix}"] += 1
+
     return track_counts
 
 
@@ -914,37 +956,67 @@ def handle_tracks(tracks, track_counts, root, full_path):
     unknown_subtitle_count = track_counts["unknown_subtitle"]
     total_tracks = sum(track_counts.values())
 
-    failed_elimination_text = (
-        "Language could not be determined through process of elimination."
-    )
+    # helps avoid processing too many pgs subs
+    subtitle_count = 0
+    pgs_count = 0
 
     for track in tracks:
-        clean_subtitle_location()  # clean out the subs_test folder
-        print_track_info(track)
-
-        if track._track_type != "subtitles":
+        # skip if the track_type isn't in the list of track types to check
+        if track._track_type not in track_types_to_check:
             continue
 
-        extension = set_extension(track)
+        # print info about the track
+        print_track_info(track)
 
-        if track.language in track_languages_to_check:
+        if track._track_type == "subtitles":
+            clean_subtitle_location()  # clean out the subs_test folder
+            extension = set_extension(track)
+            subtitle_count += 1
+
+            if track.track_codec == "HDMV PGS":
+                pgs_count += 1
+
+            if track.language not in subtitle_languages_to_check:
+                continue
+
+            if str(track.track_name) == "None":
+                print(
+                    f"\t\tTrack name is empty, TRACK: {track.track_id} on {full_path}"
+                )
+                continue
+
             done = False
-            print("\n\t\tChecking track...")
-            if str(track.track_name) != "None":
-                sign = check_for_sign_keywords(track.track_name, track)
 
-                if sign != "None":
-                    print("\t\tTrack name contains a Signs keyword.")
-                    if total_tracks > 0 and total_tracks % 2 == 0:
+            print("\n\t\tChecking track...")
+            sign = contains_sign_keyword(track.track_name)
+
+            if sign:
+                print("\t\tTrack name contains a Signs keyword.")
+                if total_tracks > 0 and total_tracks % 2 == 0:
+                    if unknown_audio_count == 0 and unknown_subtitle_count == 1:
+                        if (
+                            total_tracks
+                            - (
+                                jpn_audio_count
+                                + eng_audio_count
+                                + jpn_subtitle_count
+                                + eng_subtitle_count
+                            )
+                            == unknown_subtitle_count
+                        ):
+                            send_message(
+                                "\tTrack determined to be English through process of elimination."
+                            )
+                            set_track_language(full_path, track, "eng")
+                            done = True
+
+            elif eng_audio_count == 0:
+                print("\t\tNo recognized name track.")
+                if jpn_subtitle_count == 0 and jpn_audio_count == 1:
+                    if eng_subtitle_count == 0 and eng_audio_count == 0:
                         if unknown_audio_count == 0 and unknown_subtitle_count == 1:
                             if (
-                                total_tracks
-                                - (
-                                    jpn_audio_count
-                                    + eng_audio_count
-                                    + jpn_subtitle_count
-                                    + eng_subtitle_count
-                                )
+                                total_tracks - (jpn_audio_count + jpn_subtitle_count)
                                 == unknown_subtitle_count
                             ):
                                 send_message(
@@ -953,70 +1025,45 @@ def handle_tracks(tracks, track_counts, root, full_path):
                                 set_track_language(full_path, track, "eng")
                                 done = True
 
-                elif eng_audio_count == 0:
-                    print("\t\tNo recognized name track.")
-                    if jpn_subtitle_count == 0 and jpn_audio_count == 1:
-                        if eng_subtitle_count == 0 and eng_audio_count == 0:
-                            if unknown_audio_count == 0 and unknown_subtitle_count == 1:
-                                if (
-                                    total_tracks
-                                    - (jpn_audio_count + jpn_subtitle_count)
-                                    == unknown_subtitle_count
-                                ):
-                                    send_message(
-                                        "\tTrack determined to be English through process of elimination."
-                                    )
-                                    set_track_language(full_path, track, "eng")
-                                    done = True
-            else:
-                print(
-                    f"\t\tTrack name is empty, TRACK: {str(track.track_id)} on {full_path}"
-                )
-                errors.append(
-                    f"Track name is empty, TRACK: {str(track.track_id)} on {full_path}"
-                )
-
             if not done:
-                print(f"\t\t{failed_elimination_text}")
-                detect_subs_via_fasttext(track, extension, root, full_path, tracks)
+                print(
+                    "\t\tLanguage could not be determined through process of elimination."
+                )
+                fast_text_detect(track, extension, root, full_path, tracks)
 
-        else:
-            print("\n\t\tNo matching track found.\n")
+
+# Prints the list section with title and items
+def print_list_section(title, items):
+    if not items:
+        return
+    send_message(f"\n\t--- {title} ---")
+    for it in items:
+        send_message(f"{it}\n")
 
 
 if __name__ == "__main__":
-    if args.path and args.file:
-        send_error_message("\n\tCannot use both --path and --file at the same time.\n")
-    elif args.path:
+    if path:
         if os.path.isdir(path):
             os.chdir(path)
             for root, dirs, files in os.walk(path):
                 clean_and_sort(files, root, dirs)
-                print("\nCurrent Path: ", root + "\nDirectories: ", dirs)
-                print("Files: ", files)
+                print(f"\nCurrent Path: {root}\nDirectories: {dirs}")
+                print(f"Files: {files}")
                 start(files, root, dirs)
         else:
-            send_error_message("\n\tNot a valid path: " + path + "\n")
-    elif args.file:
-        send_message("\n\tFile: " + args.file)
+            send_message(f"\n\tNot a valid path: {path}\n", error=True)
+    elif file:
+        send_message(f"\n\tFile: {file}")
         if os.path.isfile(file):
             start([os.path.basename(file)], os.path.dirname(file), [])
         else:
-            send_error_message("\n\tFile does not exist.\n")
+            send_message("\n\tFile does not exist.\n", error=True)
 
-    # Print errors
-    if errors:
-        send_message("\n\t--- Errors ---")
-        for problem in errors:
-            send_message(str(problem) + "\n")
-
-    # Print items changed
-    if items_changed:
-        send_message("\n\t--- Items Changed ---")
-        for item in items_changed:
-            send_message(str(item) + "\n")
+    # Print summary
+    print_list_section("Errors", errors)
+    print_list_section("Items Changed", items_changed)
 
     # Print execution time
     execution_time = datetime.now() - startTime
-    send_message("\nTotal Execution Time: " + str(execution_time))
+    send_message(f"\nTotal Execution Time: {execution_time}")
     send_message("[END]-------------------------------------------[END]\n")
