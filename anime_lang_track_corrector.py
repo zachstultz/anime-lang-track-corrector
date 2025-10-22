@@ -1031,6 +1031,39 @@ def handle_tracks(tracks, track_counts, root, full_path):
                 )
                 fast_text_detect(track, extension, root, full_path, tracks)
 
+        elif track._track_type == "audio":
+            # skip if there are no unknown audio tracks
+            if unknown_audio_count == 0:
+                continue
+
+            # skip if the language is not in the list of languages to check
+            if track.language not in audio_languages_to_check:
+                continue
+
+            # skip if the track name is empty, audio correct relies on the track name
+            if not track.track_name:
+                continue
+
+            lang_keyword_search = False
+
+            # check for language keywords
+            # EX: eng or english
+            for code in lang_codes:
+                lang_keyword_search = contains_language_keyword(
+                    track, code, root, full_path
+                ) or contains_language_keyword(track, code[:-1], full_path)
+
+                if lang_keyword_search:
+                    # update our counts because any upcoming uknown subtitle tracks
+                    # could now be determined through elimination
+                    track.language = code
+                    unknown_audio_count -= 1
+                    if code == "eng":
+                        eng_audio_count += 1
+                    elif code == "jpn":
+                        jpn_audio_count += 1
+                    break
+
 
 # Prints the list section with title and items
 def print_list_section(title, items):
