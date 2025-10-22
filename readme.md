@@ -16,7 +16,7 @@ Best used in tandem with https://github.com/iwalton3/media-scripts/tree/master/f
     -v "/path/to/override/settings.py:/app/settings.py:ro" `#optional` \
     -v "/path/to/anime/video/file.mkv:/path/to/anime/video/file.mkv"\
     -v "/path/to/SubtitleEdit/folder":/app/se \
-    zachstultz/anime_lang_track_corrector:master
+    zachstultz/anime-lang-track-corrector:latest
 ```
 
 ### Path Example:
@@ -29,7 +29,7 @@ Best used in tandem with https://github.com/iwalton3/media-scripts/tree/master/f
     -v "/path/to/override/settings.py:/app/settings.py:ro" `#optional` \
     -v "/path/to/anime/folder:/anime_folder" \
     -v "/path/to/SubtitleEdit/folder":/app/se \
-    zachstultz/anime_lang_track_corrector:master
+    zachstultz/anime-lang-track-corrector:latest
 ```
 
 ## Linux Install (Ubuntu/Debian)
