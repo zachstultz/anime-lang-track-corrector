@@ -1051,7 +1051,7 @@ def handle_tracks(tracks, track_counts, root, full_path):
             # EX: eng or english
             for code in lang_codes:
                 lang_keyword_search = contains_language_keyword(
-                    track, code, root, full_path
+                    track, code, full_path
                 ) or contains_language_keyword(track, code[:-1], full_path)
 
                 if lang_keyword_search:
